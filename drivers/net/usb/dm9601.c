@@ -266,16 +266,9 @@ static void dm9601_get_drvinfo(struct net_device *net,
 	usbnet_get_drvinfo(net, info);
 }
 
-static u32 dm9601_get_link(struct net_device *net)
-{
-	struct usbnet *dev = netdev_priv(net);
-
-	return mii_link_ok(&dev->mii);
-}
-
 static const struct ethtool_ops dm9601_ethtool_ops = {
 	.get_drvinfo	= dm9601_get_drvinfo,
-	.get_link	= dm9601_get_link,
+	.get_link	= usbnet_get_link,
 	.get_msglevel	= usbnet_get_msglevel,
 	.set_msglevel	= usbnet_set_msglevel,
 	.get_eeprom_len	= dm9601_get_eeprom_len,
