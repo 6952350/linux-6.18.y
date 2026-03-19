@@ -82,6 +82,7 @@
 /* RTL8211F LED configuration */
 #define RTL8211F_LEDCR_PAGE			0xd04
 #define RTL8211F_LEDCR				0x10
+#define RTL8211F_EEELCR			0x11
 #define RTL8211F_LEDCR_MODE			BIT(15)
 #define RTL8211F_LEDCR_ACT_TXRX			BIT(4)
 #define RTL8211F_LEDCR_LINK_1000		BIT(3)
@@ -206,7 +207,103 @@ struct rtl821x_priv {
 	struct clk *clk;
 	/* rtl8211f */
 	u16 iner;
+	/* LED configuration from device tree */
+	bool led_dts_configured;
+	u16 led_reg_val;
 };
+
+/* RTL8211F LED trigger mapping */
+static const struct {
+	const char *name;
+	unsigned long rule_bit;
+} rtl8211f_led_trigger_map[] = {
+	{ "activity", BIT(TRIGGER_NETDEV_RX) | BIT(TRIGGER_NETDEV_TX) },
+	{ "link-10",  BIT(TRIGGER_NETDEV_LINK_10) },
+	{ "link-100", BIT(TRIGGER_NETDEV_LINK_100) },
+	{ "link-1000", BIT(TRIGGER_NETDEV_LINK_1000) },
+};
+
+static const char *rtl8211f_led_propnames[] = {
+	"realtek,led0-triggers",
+	"realtek,led1-triggers",
+	"realtek,led2-triggers",
+};
+
+static void rtl8211f_apply_led_config(struct phy_device *phydev)
+{
+	struct rtl821x_priv *priv = phydev->priv;
+	u16 reg;
+	int ret;
+
+	if (!priv->led_dts_configured)
+		return;
+
+	reg = priv->led_reg_val | RTL8211F_LEDCR_MODE;
+	ret = phy_write_paged(phydev, RTL8211F_LEDCR_PAGE, RTL8211F_LEDCR, reg);
+	if (ret < 0) {
+		phydev_err(phydev, "Failed to write LEDCR: %d\n", ret);
+		return;
+	}
+
+	ret = phy_write_paged(phydev, RTL8211F_LEDCR_PAGE, RTL8211F_EEELCR, 0);
+	if (ret < 0) {
+		phydev_err(phydev, "Failed to clear EEELCR: %d\n", ret);
+		return;
+	}
+
+	phydev_dbg(phydev, "Applied LED config: 0x%04x\n", reg);
+}
+
+/* Convert a rules bitmap to the hardware bits for a single LED (5-bit field) */
+static u16 rtl8211f_rules_to_led_bits(unsigned long rules)
+{
+	u16 val = 0;
+
+	if (test_bit(TRIGGER_NETDEV_RX, &rules) &&
+	    test_bit(TRIGGER_NETDEV_TX, &rules))
+		val |= RTL8211F_LEDCR_ACT_TXRX;
+
+	if (test_bit(TRIGGER_NETDEV_LINK_10, &rules))
+		val |= RTL8211F_LEDCR_LINK_10;
+
+	if (test_bit(TRIGGER_NETDEV_LINK_100, &rules))
+		val |= RTL8211F_LEDCR_LINK_100;
+
+	if (test_bit(TRIGGER_NETDEV_LINK_1000, &rules))
+		val |= RTL8211F_LEDCR_LINK_1000;
+
+	return val;
+}
+
+/* Parse triggers for a single LED and accumulate into led_reg_val */
+static void rtl8211f_parse_led_triggers(struct phy_device *phydev, u8 led_index,
+				       const char *propname)
+{
+	struct device_node *np = phydev->mdio.dev.of_node;
+	struct rtl821x_priv *priv = phydev->priv;
+	struct property *prop;
+	const char *s;
+	int i;
+	unsigned long rules = 0;
+
+	of_property_for_each_string(np, propname, prop, s) {
+		for (i = 0; i < ARRAY_SIZE(rtl8211f_led_trigger_map); i++) {
+			if (!strcmp(s, rtl8211f_led_trigger_map[i].name)) {
+				rules |= rtl8211f_led_trigger_map[i].rule_bit;
+				break;
+			}
+		}
+		if (i == ARRAY_SIZE(rtl8211f_led_trigger_map))
+			phydev_warn(phydev, "Unknown LED trigger '%s' for LED%d\n",
+				    s, led_index);
+	}
+
+	if (rules) {
+		priv->led_reg_val |= (rtl8211f_rules_to_led_bits(rules) <<
+				      (RTL8211F_LEDCR_SHIFT * led_index));
+		priv->led_dts_configured = true;
+	}
+}
 
 static int rtl821x_read_page(struct phy_device *phydev)
 {
@@ -276,10 +373,15 @@ static int rtl8211f_probe(struct phy_device *phydev)
 {
 	struct device *dev = &phydev->mdio.dev;
 	int ret;
+	int i;
 
 	ret = rtl821x_probe(phydev);
 	if (ret < 0)
 		return ret;
+
+	/* Parse LED triggers from device tree */
+	for (i = 0; i < ARRAY_SIZE(rtl8211f_led_propnames); i++)
+		rtl8211f_parse_led_triggers(phydev, i, rtl8211f_led_propnames[i]);
 
 	/* Disable all PME events */
 	ret = phy_write_paged(phydev, RTL8211F_WOL_PAGE,
@@ -699,6 +801,7 @@ static int rtl8211f_config_phy_eee(struct phy_device *phydev)
 static int rtl8211f_config_init(struct phy_device *phydev)
 {
 	struct device *dev = &phydev->mdio.dev;
+	struct rtl821x_priv *priv = phydev->priv;
 	int ret;
 
 	ret = rtl8211f_config_aldps(phydev);
@@ -717,6 +820,10 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		dev_err(dev, "clkout configuration failed: %pe\n",
 			ERR_PTR(ret));
 		return ret;
+	}
+
+	if (priv->led_dts_configured) {
+		rtl8211f_apply_led_config(phydev);
 	}
 
 	return rtl8211f_config_phy_eee(phydev);
@@ -817,18 +924,26 @@ static int rtl8211f_resume(struct phy_device *phydev)
 	if (device_may_wakeup(&phydev->mdio.dev))
 		ret = phy_write_paged(phydev, 0xa42, RTL821x_INER, priv->iner);
 
+	if (priv->led_dts_configured) {
+		rtl8211f_apply_led_config(phydev);
+	}
+
 	return ret;
 }
 
 static int rtl8211x_led_hw_is_supported(struct phy_device *phydev, u8 index,
 					unsigned long rules)
 {
+	struct rtl821x_priv *priv = phydev->priv;
 	const unsigned long mask = BIT(TRIGGER_NETDEV_LINK) |
 				   BIT(TRIGGER_NETDEV_LINK_10) |
 				   BIT(TRIGGER_NETDEV_LINK_100) |
 				   BIT(TRIGGER_NETDEV_LINK_1000) |
 				   BIT(TRIGGER_NETDEV_RX) |
 				   BIT(TRIGGER_NETDEV_TX);
+
+	if (priv && priv->led_dts_configured)
+		return -EOPNOTSUPP;
 
 	/* The RTL8211F PHY supports these LED settings on up to three LEDs:
 	 * - Link: Configurable subset of 10/100/1000 link rates
