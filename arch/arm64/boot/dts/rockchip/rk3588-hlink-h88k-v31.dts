@@ -646,7 +646,8 @@
 		 * LED1 (Green):   Active 10/100/1000
 		 * LED2 (Yellow):  Link 10/100/1000
 		 */
-		realtek,led-data = <0xae00>;
+		realtek,led1-triggers = "activity";
+		realtek,led2-triggers = "link-10", "link-100", "link-1000";
 
 		pinctrl-0 = <&eth_phy0_reset_pin>;
 		pinctrl-names = "default";
