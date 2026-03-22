@@ -12,8 +12,7 @@ jobs:
         run: |
           mkdir -p output
           # Build meson-gxl-s905l3b-m302a DTB with proper include paths
-          dtc -I dts -O dtb -i arch/arm64/boot/dts/amlogic -i arch/arm64/boot/dts -o output/meson-gxl-s905l3b-m302a.dtb arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
-      - name: Upload DTB artifacts
+          dtc -I dts -O dtb -i . -i arch/arm64/boot/dts/amlogic -i arch/arm64/boot/dts -o output/meson-gxl-s905l3b-m302a.dtb arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
         uses: actions/upload-artifact@v4
         with:
           name: dtb-files
