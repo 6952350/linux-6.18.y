@@ -17,6 +17,21 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
+	cvbs-connector {
+		compatible = "composite-video-connector";
+		port {
+			cvbs_connector_in: endpoint {
+				remote-endpoint = <&cvbs_vdac_out>;
+			};
+		};
+	};
+
+	audio-amplifier {
+		compatible = "simple-audio-amplifier";
+		VCC-supply = <&vcc_3v3>;
+		enable-gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
+	};
+
 };
 
 // the gpu in the S905L2 has one pp core less
@@ -45,4 +60,49 @@
 
 &internal_phy {
 	max-speed = <100>;
+};
+
+&cvbs_adc {
+	status = "okay";
+};
+
+&vpu {
+	status = "okay";
+};
+
+&cvbs_out {
+	status = "okay";
+	port {
+		cvbs_vdac_out: endpoint {
+			remote-endpoint = <&cvbs_connector_in>;
+		};
+	};
+};
+
+&i2s_a {
+	status = "okay";
+	pinctrl-0 = <&i2s_a_pins>;
+	pinctrl-names = "default";
+};
+
+&dai {
+	status = "okay";
+};
+
+&audio {
+	status = "okay";
+	model = "Meson GXL Audio";
+	dai-link@0 {
+		sound-dai = <&dai>;
+	};
+};
+
+&ao_codec {
+	status = "okay";
+};
+
+&spdif_a {
+	status = "okay";
+	pinctrl-0 = <&spdif_a_pins>;
+	pinctrl-names = "default";
 };
