@@ -1,101 +1,49 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-/*
- * Copyright (c) 2016 Endless Computers, Inc.
- * Author: Carlo Caione <carlo@endlessm.com>
- * Modified for MBH-M302A (S905L3b) with working AV output
- */
+name: Build M302A DTB
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts'
 
-/dts-v1/;
+jobs:
+  build-dtb:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
-#include "meson-gxl-s905w-p281.dts"
+      - name: Install dependencies
+        run: |
+          sudo apt update -y
+          sudo apt install -y build-essential gcc-aarch64-linux-gnu flex bison device-tree-compiler
 
-/ {
-	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
-	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
-	
-	/* 内存配置：2GB (0x80000000 = 2^31 = 2GB) */
-	memory@0 {
-		device_type = "memory";
-		reg = <0x0 0x0 0x0 0x80000000>;
-	};
+      - name: Check file existence
+        run: |
+          ls -l arch/arm64/configs/defconfig
+          ls -l arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
 
-	/* AV（复合视频）输出连接器 - 核心AV功能 */
-	cvbs-connector {
-		compatible = "composite-video-connector";
-		port {
-			cvbs_connector_in: endpoint {
-				remote-endpoint = <&cvbs_vdac_out>;
-			};
-		};
-	};
+      - name: Generate config
+        run: |
+          cp arch/arm64/configs/defconfig .config
+          yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
 
-	/* 音频放大器配置 */
-	audio-amplifier {
-		compatible = "simple-audio-amplifier";
-		VCC-supply = <&vcc_3v3>;
-		enable-gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
-	};
-};
+      - name: Compile DTB
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) amlogic/meson-gxl-s905l3b-m302a.dtb
 
-/* GPU中断适配（S905L2/L3b只有2个PP核心） */
-&mali {
-	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
-};
+      - name: Prepare output
+        if: always()
+        run: |
+          mkdir -p output
+          cp arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb output/ || true
+          ls -l output/
 
-/* EMMC高速配置 */
-&sd_emmc_c {
-	status = "okay";
-	bus-width = <8>;          // 8线EMMC
-	cap-mmc-highspeed;        // 启用高速模式
-	mmc-ddr-1_8v;             // DDR模式 1.8V
-	mmc-hs200-1_8v;           // HS200模式 1.8V
-	max-frequency = <200000000>; // 200MHz最大频率
-};
-
-/* EMMC PHY速率配置 */
-&internal_phy {
-	max-speed = <100>;
-};
-
-/* VPU视频处理单元（启用硬件解码） */
-&vpu {
-	status = "okay";
-};
-
-/* VDAC - AV（CVBS）输出核心硬件（替代错误的cvbs_out） */
-&vdac {
-	status = "okay";
-	amlogic,cvbs-mode = <0>; // 0=PAL (欧洲/中国), 1=NTSC (美国/日本)
-	port {
-		cvbs_vdac_out: endpoint {
-			remote-endpoint = <&cvbs_connector_in>;
-		};
-	};
-};
-
-/* I2S音频输出（S905W正确标签：i2s0） */
-&i2s0 {
-	status = "okay";
-	pinctrl-0 = <&i2s0_pins>;
-	pinctrl-names = "default";
-};
-
-/* AO音频编解码器（内置音频解码） */
-&ao_codec {
-	status = "okay";
-};
-
-/* SPDIF数字音频输出（S905W正确标签：spdif_out） */
-&spdif_out {
-	status = "okay";
-	pinctrl-0 = <&spdif_out_pins>;
-	pinctrl-names = "default";
-};
+      - name: Upload DTB
+        uses: actions/upload-artifact@v4
+        with:
+          name: m302a-dtb
+          path: output/
+          retention-days: 7
