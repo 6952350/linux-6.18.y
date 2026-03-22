@@ -6,7 +6,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build DTB
+      - name: Install device tree compiler
+        run: sudo apt-get update && sudo apt-get install -y device-tree-compiler
+      - name: Build DTB files
         run: |
-          mkdir output
+          mkdir -p output
+          # Build meson-gxl-s905l3b-m302a DTB
           dtc -I dts -O dtb -o output/meson-gxl-s905l3b-m302a.dtb arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
+      - name: Upload DTB artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dtb-files
+          path: output/
