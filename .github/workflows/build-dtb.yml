@@ -9,14 +9,12 @@ jobs:
   build-dtb:
     runs-on: ubuntu-22.04
     steps:
-      # 1. 拉取完整源码（含你的defconfig和DTS）
       - name: Checkout full source code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
 
-      # 2. 安装编译依赖
       - name: Install build dependencies
         run: |
           sudo apt update && sudo apt install -y \
@@ -26,31 +24,25 @@ jobs:
             bison \
             device-tree-compiler
 
-      # 3. 用你的defconfig生成.config（核心修复！）
       - name: Generate .config from your defconfig
         run: |
           cd $GITHUB_WORKSPACE
-          # 复制你的defconfig到默认路径（如果路径不对，自行修改下面的路径）
           cp arch/arm64/configs/defconfig .config
-          # 用默认值确认配置，避免交互
           yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
 
-      # 4. 仅编译你的DTS文件（不修改任何内容）
+      # 核心修复：编译命令只写相对路径（去掉arch/arm64/boot/dts/前缀）
       - name: Compile DTB from your DTS
         run: |
           cd $GITHUB_WORKSPACE
           make ARCH=arm64 \
                CROSS_COMPILE=aarch64-linux-gnu- \
                -j$(nproc) \
-               arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
+               amlogic/meson-gxl-s905l3b-m302a.dtb  # 仅保留相对路径
 
-      # 5. 验证并上传DTB
       - name: Verify and upload DTB
         run: |
-          # 验证编译结果
           ls -lh arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
           file arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
-          # 复制到输出目录
           mkdir -p output
           cp arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb output/
       
