@@ -1,67 +1,101 @@
-name: Build M302A DTB (Final Working Version)
-on: [workflow_dispatch]
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2016 Endless Computers, Inc.
+ * Author: Carlo Caione <carlo@endlessm.com>
+ * Modified for MBH-M302A (S905L3b) with working AV output
+ */
 
-jobs:
-  build-dtb:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout full source code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
+/dts-v1/;
 
-      - name: Install build dependencies
-        run: |
-          sudo apt update && sudo apt install -y \
-            build-essential \
-            gcc-aarch64-linux-gnu \
-            flex \
-            bison \
-            device-tree-compiler
-          # 打印依赖版本（修正注释格式，避免#导致语法错误）
-          aarch64-linux-gnu-gcc --version
-          dtc --version
+#include "meson-gxl-s905w-p281.dts"
 
-      - name: Show file structure
-        run: |
-          cd $GITHUB_WORKSPACE
-          # 检查defconfig和DTS是否存在
-          ls -lh arch/arm64/configs/defconfig
-          ls -lh arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
-          # 检查DTB是否在Makefile中声明
-          grep -i meson-gxl-s905l3b-m302a arch/arm64/boot/dts/Makefile || echo "DTB not declared in Makefile"
+/ {
+	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
+	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
+	
+	/* 内存配置：2GB (0x80000000 = 2^31 = 2GB) */
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>;
+	};
 
-      - name: Generate .config from defconfig
-        run: |
-          cd $GITHUB_WORKSPACE
-          cp arch/arm64/configs/defconfig .config
-          yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig 2>&1 | tee config.log
+	/* AV（复合视频）输出连接器 - 核心AV功能 */
+	cvbs-connector {
+		compatible = "composite-video-connector";
+		port {
+			cvbs_connector_in: endpoint {
+				remote-endpoint = <&cvbs_vdac_out>;
+			};
+		};
+	};
 
-      - name: Compile DTB (debug mode)
-        run: |
-          cd $GITHUB_WORKSPACE
-          # 单线程+详细日志编译（移除V=1后的注释，避免语法错误）
-          make ARCH=arm64 \
-               CROSS_COMPILE=aarch64-linux-gnu- \
-               -j1 \
-               V=1 \
-               amlogic/meson-gxl-s905l3b-m302a.dtb 2>&1 | tee compile.log
+	/* 音频放大器配置 */
+	audio-amplifier {
+		compatible = "simple-audio-amplifier";
+		VCC-supply = <&vcc_3v3>;
+		enable-gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
+	};
+};
 
-      - name: Collect output files
-        if: always()
-        run: |
-          cd $GITHUB_WORKSPACE
-          mkdir -p output
-          # 复制日志和DTB（如果存在）
-          cp config.log compile.log output/ || true
-          cp arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb output/ || true
-          # 打印最终目录结构
-          ls -lh output/
+/* GPU中断适配（S905L2/L3b只有2个PP核心） */
+&mali {
+	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
+};
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dtb-build-result
-          path: output/
-          retention-days: 7
+/* EMMC高速配置 */
+&sd_emmc_c {
+	status = "okay";
+	bus-width = <8>;          // 8线EMMC
+	cap-mmc-highspeed;        // 启用高速模式
+	mmc-ddr-1_8v;             // DDR模式 1.8V
+	mmc-hs200-1_8v;           // HS200模式 1.8V
+	max-frequency = <200000000>; // 200MHz最大频率
+};
+
+/* EMMC PHY速率配置 */
+&internal_phy {
+	max-speed = <100>;
+};
+
+/* VPU视频处理单元（启用硬件解码） */
+&vpu {
+	status = "okay";
+};
+
+/* VDAC - AV（CVBS）输出核心硬件（替代错误的cvbs_out） */
+&vdac {
+	status = "okay";
+	amlogic,cvbs-mode = <0>; // 0=PAL (欧洲/中国), 1=NTSC (美国/日本)
+	port {
+		cvbs_vdac_out: endpoint {
+			remote-endpoint = <&cvbs_connector_in>;
+		};
+	};
+};
+
+/* I2S音频输出（S905W正确标签：i2s0） */
+&i2s0 {
+	status = "okay";
+	pinctrl-0 = <&i2s0_pins>;
+	pinctrl-names = "default";
+};
+
+/* AO音频编解码器（内置音频解码） */
+&ao_codec {
+	status = "okay";
+};
+
+/* SPDIF数字音频输出（S905W正确标签：spdif_out） */
+&spdif_out {
+	status = "okay";
+	pinctrl-0 = <&spdif_out_pins>;
+	pinctrl-names = "default";
+};
