@@ -5,22 +5,17 @@
  */
 
 /dts-v1/;
-
 #include "meson-gxl-s905w-p281.dts"
 
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
 	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
-	
+
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
-
 };
-
-// the gpu in the S905L2 has one pp core less
-// (i.e. only two in total) than the one in the other S905X/W
 
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
@@ -31,7 +26,7 @@
 		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
+	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
 &sd_emmc_c {
@@ -47,19 +42,18 @@
 	max-speed = <100>;
 };
 
-// 仅新增：AV输出核心节点（不修改任何原有内容）
 &ao {
 	status = "okay";
 	avout {
 		compatible = "amlogic,meson-gxl-avout";
 		status = "okay";
-		amlogic,avout-mode = <0>;        // 0=PAL（国内通用），1=NTSC
+		amlogic,avout-mode = <0>;
 		amlogic,avout-vin = <1>;
 		amlogic,avout-aout = <0>;
 	};
 	audio-codec {
 		compatible = "amlogic,meson-gxl-audio-codec";
 		status = "okay";
-		amlogic,avout-enable = <1>;      // 启用AV音频输出
+		amlogic,avout-enable = <1>;
 	};
 };
