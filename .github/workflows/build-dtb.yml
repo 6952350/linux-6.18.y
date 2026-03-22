@@ -39,7 +39,7 @@ jobs:
           # 清理旧编译文件（避免冲突）
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- clean
           # 使用晶晨64位默认配置（原仓库核心配置）
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- meson64_defconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
           # 生成最终配置（自动补全依赖）
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
