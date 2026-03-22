@@ -5,6 +5,7 @@
  */
 
 /dts-v1/;
+
 #include "meson-gxl-s905w-p281.dts"
 
 / {
