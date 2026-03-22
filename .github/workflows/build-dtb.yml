@@ -1,38 +1,32 @@
-name: Build M302A DTB (Only Single File)
+name: Build DTB
+
 on:
   workflow_dispatch:
 
 jobs:
-  build-dtb:
-    runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout full kernel source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
+    - name: Checkout unifreq repo
+      run: |
+        git clone --depth=1 https://github.com/unifreq/linux-6.1.y.git
+        cd linux-6.1.y
 
-      - name: Install dependencies
-        run: |
-          sudo apt update && sudo apt install -y \
-            build-essential gcc-aarch64-linux-gnu device-tree-compiler flex bison
+    - name: Install dtc
+      run: sudo apt update && sudo apt install device-tree-compiler -y
 
-      # 核心修复：用dtc直接编译（手动指定依赖路径，跳过内核Makefile的批量DTB编译）
-      - name: Compile ONLY M302A DTB (dtc with dependency path)
-        run: |
-          cd $GITHUB_WORKSPACE/arch/arm64/boot/dts/amlogic/
-          # 手动指定DTS依赖路径（解决#include找不到文件的问题）
-          dtc -I dts -O dtb -o meson-gxl-s905l3b-m302a.dtb \
-              -@ -H epapr \
-              -i $GITHUB_WORKSPACE/arch/arm64/boot/dts/ \
-              -i $GITHUB_WORKSPACE/arch/arm64/boot/dts/amlogic/ \
-              meson-gxl-s905l3b-m302a.dts
-          # 验证结果
-          ls -lh meson-gxl-s905l3b-m302a.dtb && file meson-gxl-s905l3b-m302a.dtb
+    - name: Build DTB
+      run: |
+        cd linux-6.1.y
+        mkdir output
+        for dts in $(find . -name "*.dts"); do
+          name=$(basename "$dts" .dts)
+          dtc -I dts -O dtb -o output/$name.dtb $dts
+        done
 
-      - name: Upload DTB
-        uses: actions/upload-artifact@v4
-        with:
-          name: m302a-dtb-av
-          path: arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
-          retention-days: 30
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: dtb-files
+        path: linux-6.1.y/output
