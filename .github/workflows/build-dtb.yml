@@ -1,51 +1,69 @@
-# 脚本名称（自定义）
-name: Build M302A DTB (AV Output)
-# 触发条件：手动触发 + 修改DTS文件时自动触发
+name: Build M302A DTB (Linux 6.18.y Native)
 on:
-  workflow_dispatch:  # 允许手动点击触发
-  push:
-    paths:
-      # 仅修改M302A的DTS文件时自动触发编译
-      - 'arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts'
+  workflow_dispatch:  # 仅手动触发，避免自动编译
 
-# 编译任务
 jobs:
   build-dtb:
-    # 使用Ubuntu 22.04环境（稳定）
     runs-on: ubuntu-22.04
     steps:
-      # 步骤1：拉取你仓库的代码
-      - name: Checkout code
+      # 步骤1：拉取完整内核源码（必须fetch-depth: 0，否则依赖文件缺失）
+      - name: Checkout full kernel source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # 仅拉取最新代码，加快速度
+          fetch-depth: 0
+          submodules: recursive  # 拉取子模块（内核依赖）
 
-      # 步骤2：安装DTB编译工具
-      - name: Install build tools
+      # 步骤2：安装内核原生编译依赖（和原仓库编译环境一致）
+      - name: Install native kernel build dependencies
         run: |
           sudo apt update && sudo apt install -y \
-            device-tree-compiler \
+            build-essential \
             gcc-aarch64-linux-gnu \
+            libncurses-dev \
+            libssl-dev \
             bc \
             flex \
-            bison
+            bison \
+            device-tree-compiler \
+            libelf-dev \
+            liblz4-tool \
+            u-boot-tools \
+            git \
+            wget
 
-      # 步骤3：编译M302A的DTB文件
-      - name: Compile M302A DTB
+      # 步骤3：设置内核编译环境（原生配置，和原仓库一致）
+      - name: Configure kernel for Amlogic S905L3b
         run: |
-          # 进入DTS所在目录
-          cd arch/arm64/boot/dts/amlogic/
-          # 编译DTB（适配Linux 6.18.y的参数）
-          dtc -I dts -O dtb -o meson-gxl-s905l3b-m302a.dtb \
-              -@ -H epapr -W no-unit_address_vs_reg \
-              meson-gxl-s905l3b-m302a.dts
-          # 验证编译结果
-          ls -l meson-gxl-s905l3b-m302a.dtb && file meson-gxl-s905l3b-m302a.dtb
+          # 进入源码根目录
+          cd $GITHUB_WORKSPACE
+          # 清理旧编译文件（避免冲突）
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- clean
+          # 使用晶晨64位默认配置（原仓库核心配置）
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- meson64_defconfig
+          # 生成最终配置（自动补全依赖）
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      # 步骤4：上传编译好的DTB文件（供下载）
-      - name: Upload DTB artifact
-        uses: actions/upload-artifact@v4
+      # 步骤4：编译指定DTB（内核原生方式，自动处理所有include依赖）
+      - name: Compile M302A DTB (native kernel make)
+        run: |
+          cd $GITHUB_WORKSPACE
+          # 仅编译你需要的DTB文件（核心指令，原仓库也用这个）
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+               -j$(nproc) \
+               dtbs \
+               DTBS_DIR=arch/arm64/boot/dts \
+               CONFIG_ARCH_MESON=y \
+               arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
+
+      # 步骤5：验证并上传DTB文件
+      - name: Verify and upload DTB
+        run: |
+          # 验证编译结果
+          ls -lh arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
+          file arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
+        # 上传产物供下载
+      - uses: actions/upload-artifact@v4
         with:
-          name: m302a-dtb-av  # 下载包名称
-          path: arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb  # DTB文件路径
-          retention-days: 30  # 文件保留30天，到期自动删除
+          name: m302a-dtb-av-final
+          path: arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
+          retention-days: 30
