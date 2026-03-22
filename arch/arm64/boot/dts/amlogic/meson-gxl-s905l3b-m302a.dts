@@ -6,7 +6,7 @@
 
 /dts-v1/;
 
-#include "../meson-gxl-s905w-p281.dts"
+#include "meson-gxl-s905w-p281.dts"
 
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
