@@ -14,7 +14,7 @@ jobs:
           # Build meson-gxl-s905l3b-m302a DTB
           dtc -I dts -O dtb -o output/meson-gxl-s905l3b-m302a.dtb arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
       - name: Upload DTB artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: dtb-files
           path: output/
