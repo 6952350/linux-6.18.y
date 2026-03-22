@@ -1,32 +1,5 @@
-name: Build DTB
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout unifreq repo
-      run: |
-        git clone --depth=1 https://github.com/unifreq/linux-6.1.y.git
-        cd linux-6.1.y
-
-    - name: Install dtc
-      run: sudo apt update && sudo apt install device-tree-compiler -y
-
-    - name: Build DTB
-      run: |
-        cd linux-6.1.y
-        mkdir output
-        for dts in $(find . -name "*.dts"); do
-          name=$(basename "$dts" .dts)
-          dtc -I dts -O dtb -o output/$name.dtb $dts
-        done
-
-    - name: Upload
-      uses: actions/upload-artifact@v4
-      with:
-        name: dtb-files
-        path: linux-6.1.y/output
+- name: Build DTB
+  run: |
+    cd linux-6.1.y
+    mkdir output
+    dtc -I dts -O dtb -o output/meson-gxl-s905l3b-m302a.dtb arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
