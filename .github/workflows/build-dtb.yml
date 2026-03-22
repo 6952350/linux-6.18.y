@@ -1,5 +1,12 @@
-- name: Build DTB
-  run: |
-    cd linux-6.1.y
-    mkdir output
-    dtc -I dts -O dtb -o output/meson-gxl-s905l3b-m302a.dtb arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
+name: Build DTB
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build DTB
+        run: |
+          mkdir output
+          dtc -I dts -O dtb -o output/meson-gxl-s905l3b-m302a.dtb arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
