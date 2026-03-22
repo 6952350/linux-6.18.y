@@ -46,3 +46,20 @@
 &internal_phy {
 	max-speed = <100>;
 };
+
+// 仅新增：AV输出核心节点（不修改任何原有内容）
+&ao {
+	status = "okay";
+	avout {
+		compatible = "amlogic,meson-gxl-avout";
+		status = "okay";
+		amlogic,avout-mode = <0>;        // 0=PAL（国内通用），1=NTSC
+		amlogic,avout-vin = <1>;
+		amlogic,avout-aout = <0>;
+	};
+	audio-codec {
+		compatible = "amlogic,meson-gxl-audio-codec";
+		status = "okay";
+		amlogic,avout-enable = <1>;      // 启用AV音频输出
+	};
+};
