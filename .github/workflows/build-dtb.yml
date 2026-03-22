@@ -1,9 +1,5 @@
-name: Auto Build M302A DTB (Use Your Defconfig)
-on:
-  push:
-    paths:
-      - 'arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts'
-  workflow_dispatch:
+name: Build M302A DTB (Debug Mode)
+on: [workflow_dispatch] # 仅手动触发，避免频繁编译
 
 jobs:
   build-dtb:
@@ -23,32 +19,50 @@ jobs:
             flex \
             bison \
             device-tree-compiler
+          # 打印依赖版本，确认环境
+          aarch64-linux-gnu-gcc --version
+          dtc --version
 
-      - name: Generate .config from your defconfig
+      - name: Show file structure (排查路径问题)
+        run: |
+          cd $GITHUB_WORKSPACE
+          # 打印关键目录结构，确认文件存在
+          ls -lh arch/arm64/configs/defconfig
+          ls -lh arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dts
+          # 打印DTB编译规则（确认内核支持该DTB）
+          cat arch/arm64/boot/dts/Makefile | grep -i meson-gxl-s905l3b-m302a || echo "DTB未在Makefile中声明"
+
+      - name: Generate .config from defconfig
         run: |
           cd $GITHUB_WORKSPACE
           cp arch/arm64/configs/defconfig .config
-          yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
+          # 打印配置生成日志，定位配置错误
+          yes "" | make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig 2>&1 | tee config.log
 
-      # 核心修复：编译命令只写相对路径（去掉arch/arm64/boot/dts/前缀）
-      - name: Compile DTB from your DTS
+      - name: Compile DTB (带完整日志)
         run: |
           cd $GITHUB_WORKSPACE
+          # 单线程编译+完整日志，便于定位错误
           make ARCH=arm64 \
                CROSS_COMPILE=aarch64-linux-gnu- \
-               -j$(nproc) \
-               amlogic/meson-gxl-s905l3b-m302a.dtb  # 仅保留相对路径
+               -j1 \
+               V=1 \ # 打印详细编译日志
+               amlogic/meson-gxl-s905l3b-m302a.dtb 2>&1 | tee compile.log
 
-      - name: Verify and upload DTB
+      - name: Verify and upload files
+        if: always() # 即使编译失败，也上传日志
         run: |
-          ls -lh arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
-          file arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb
+          cd $GITHUB_WORKSPACE
+          # 检查DTB是否生成
+          ls -lh arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb || echo "DTB未生成"
+          # 打包日志和产物
           mkdir -p output
-          cp arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb output/
+          cp config.log compile.log output/ || true
+          cp arch/arm64/boot/dts/amlogic/meson-gxl-s905l3b-m302a.dtb output/ || true
       
-      - name: Upload DTB artifact
+      - name: Upload all files (含日志)
         uses: actions/upload-artifact@v4
         with:
-          name: m302a-dtb
+          name: build-logs-and-dtb
           path: output/
-          retention-days: 30
+          retention-days: 7
