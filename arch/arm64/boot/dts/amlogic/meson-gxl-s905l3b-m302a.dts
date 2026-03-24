@@ -1,44 +1,90 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-/*
- * Copyright (c) 2016 Endless Computers, Inc.
- * Author: Carlo Caione <carlo@endlessm.com>
- */
-
 /dts-v1/;
 
-/* 包含基础板级定义 */
 #include "meson-gxl-s905w-p281.dts"
 
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
 	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
 
-	/* 修正内存为 2GB */
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* 定义 AV 接口连接器 */
+	/* CVBS 视频连接器 */
 	cvbs-connector {
 		compatible = "composite-video-connector";
-
 		port {
 			cvbs_connector_in: endpoint {
 				remote-endpoint = <&cvbs_vdac_out>;
 			};
 		};
 	};
+
+	/* 音频路由：确保声音输出到模拟 DAC */
+	sound {
+		compatible = "amlogic,gx-sound-card";
+		model = "M302A-AUDIO";
+		
+		/* 设置音频链路 */
+		audio-routing =
+			"AU2 INL", "ACODEC LOLN",
+			"AU2 INR", "ACODEC LORN";
+
+		assigned-clocks = <&clkc CLKID_MPLL0>,
+				  <&clkc CLKID_MPLL1>,
+				  <&clkc CLKID_MPLL2>;
+		assigned-clock-parents = <0>, <0>, <0>;
+		assigned-clock-rates = <294912000>,
+				       <270950400>,
+				       <393216000>;
+
+		dai-link-0 {
+			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+		};
+
+		dai-link-1 {
+			sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
+			dai-format = "i2s";
+			mclk-fs = <256>;
+
+			codec-0 {
+				sound-dai = <&aiu AIU_HDMI_CTRL 0>;
+			};
+
+			codec-1 {
+				sound-dai = <&aiu AIU_ACODEC_CTRL 0>;
+			};
+		};
+
+		dai-link-2 {
+			sound-dai = <&aiu AIU_HDMI_CTRL 1>;
+		};
+
+		dai-link-3 {
+			sound-dai = <&aiu AIU_ACODEC_CTRL 1>;
+		};
+	};
 };
 
-/* 视频输出：将 VDAC 端口连接到上面定义的连接器 */
+/* 视频输出连接 */
 &cvbs_vdac_port {
 	cvbs_vdac_out: endpoint {
 		remote-endpoint = <&cvbs_connector_in>;
 	};
 };
 
-/* 网络修正：使用内部 PHY 并限制百兆 */
+/* 开启内部音频编解码器 (DAC) */
+&aiu {
+	status = "okay";
+};
+
+&acodec {
+	status = "okay";
+};
+
+/* 其他硬件修正 */
 &internal_phy {
 	max-speed = <100>;
 };
@@ -47,7 +93,6 @@
 	status = "okay";
 };
 
-/* GPU 修正：针对 S905L 系列核心数的调整 */
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
 		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
@@ -60,7 +105,6 @@
 	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* eMMC 存储配置 */
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
@@ -68,12 +112,4 @@
 	mmc-ddr-1_8v;
 	mmc-hs200-1_8v;
 	max-frequency = <200000000>;
-};
-
-/* 启用 HDMI CEC */
-&cec_AO {
-	status = "okay";
-	pinctrl-0 = <&ao_cec_pins>;
-	pinctrl-names = "default";
-	hdmi-phandle = <&hdmi_tx>;
 };
