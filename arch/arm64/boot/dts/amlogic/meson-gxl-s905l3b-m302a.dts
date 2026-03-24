@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /dts-v1/;
 
+/* 必须包含音频和时钟的头文件，否则无法识别 AIU 等常量 */
+#include <dt-bindings/sound/meson-aiu.h>
+#include <dt-bindings/clock/gxbb-clkc.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+/* 包含基础板级定义 */
 #include "meson-gxl-s905w-p281.dts"
 
 / {
@@ -22,12 +29,11 @@
 		};
 	};
 
-	/* 音频路由：确保声音输出到模拟 DAC */
+	/* 音频路由：将声音导向模拟 DAC (ACODEC) */
 	sound {
 		compatible = "amlogic,gx-sound-card";
 		model = "M302A-AUDIO";
 		
-		/* 设置音频链路 */
 		audio-routing =
 			"AU2 INL", "ACODEC LOLN",
 			"AU2 INR", "ACODEC LORN";
@@ -75,16 +81,17 @@
 	};
 };
 
-/* 开启内部音频编解码器 (DAC) */
+/* 启用音频子系统 */
 &aiu {
 	status = "okay";
 };
 
+/* 启用内部模拟音频编解码器 */
 &acodec {
 	status = "okay";
 };
 
-/* 其他硬件修正 */
+/* 网络修正：限制为百兆 */
 &internal_phy {
 	max-speed = <100>;
 };
@@ -93,6 +100,7 @@
 	status = "okay";
 };
 
+/* GPU 核心修正 */
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
 		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
@@ -105,6 +113,7 @@
 	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
+/* eMMC 配置 */
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
