@@ -11,17 +11,14 @@
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
 	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
-	
+
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
-
 };
 
-// the gpu in the S905L2 has one pp core less
-// (i.e. only two in total) than the one in the other S905X/W
-
+/* GPU 修正 */
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
@@ -31,9 +28,11 @@
 		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
+	interrupt-names = "gp", "gpmmu", "pp", "pmu",
+			  "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
+/* eMMC */
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
@@ -43,17 +42,54 @@
 	max-frequency = <200000000>;
 };
 
+/* PHY */
 &internal_phy {
 	max-speed = <100>;
 };
-/* Enable AV (CVBS) output */
 
-
+/* ========================= */
+/* ✅ 启用 AV 视频（CVBS） */
+/* ========================= */
 &cvbs_vdac_port {
 	status = "okay";
 };
 
-/* 可选：确保connector启用（一般默认OK） */
 &cvbs_connector {
 	status = "okay";
+};
+
+/* ========================= */
+/* ✅ 启用模拟音频（关键） */
+/* ========================= */
+&acodec {
+	status = "okay";
+};
+
+/* ========================= */
+/* 🔥 核心：HDMI + AV 同时出声 */
+/* ========================= */
+&sound {
+	status = "okay";
+
+	/* 强制 I2S 同时输出到 HDMI + ACODEC */
+	dai-link-2 {
+		sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
+		dai-format = "i2s";
+		mclk-fs = <256>;
+
+		codec-0 {
+			sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
+		};
+
+		codec-1 {
+			sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
+		};
+	};
+
+	/* 补充 routing，防止无声 */
+	audio-routing =
+		"Lineout", "AU2 OUTL",
+		"Lineout", "AU2 OUTR",
+		"AU2 INL", "ACODEC LOLP",
+		"AU2 INR", "ACODEC LORP";
 };
