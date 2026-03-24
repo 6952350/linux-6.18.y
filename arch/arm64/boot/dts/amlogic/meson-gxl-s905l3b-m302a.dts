@@ -1,8 +1,4 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-/*
- * Copyright (c) 2016 Endless Computers, Inc.
- * Author: Carlo Caione <carlo@endlessm.com>
- */
 
 /dts-v1/;
 
@@ -11,29 +7,40 @@
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
 	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
-	
+
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
+	/* ===== AV（CVBS）输出连接器 ===== */
+	cvbs_connector: cvbs-connector {
+		compatible = "composite-video-connector";
+
+		port {
+			cvbs_connector_in: endpoint {
+				remote-endpoint = <&cvbs_vdac_out>;
+			};
+		};
+	};
 };
 
-// the gpu in the S905L2 has one pp core less
-// (i.e. only two in total) than the one in the other S905X/W
-
+/* ===== GPU（保持你原来的）===== */
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
+		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+
+	interrupt-names = "gp", "gpmmu", "pp", "pmu",
+			  "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
+/* ===== eMMC ===== */
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
@@ -43,32 +50,19 @@
 	max-frequency = <200000000>;
 };
 
+/* ===== 网口限制 ===== */
 &internal_phy {
 	max-speed = <100>;
 };
-/* ================= AV (CVBS + Audio) FIX ================= */
 
-/* 打开模拟视频输出（CVBS） */
-&vdac {
+/* ===== VPU（必须开，不然没视频）===== */
+&vpu {
 	status = "okay";
 };
 
-/* 打开 CVBS 连接端口（p281 已定义，只需要启用） */
+/* ===== 关键：CVBS输出链路（正确写法，没有 vdac 报错）===== */
 &cvbs_vdac_port {
-	status = "okay";
-};
-
-/* 确保 CVBS connector 生效（继承，不要新建） */
-&cvbs_connector {
-	status = "okay";
-};
-
-/* 打开音频核心 */
-&aiu {
-	status = "okay";
-};
-
-/* 打开模拟音频 codec（AV 声音关键） */
-&acodec {
-	status = "okay";
+	cvbs_vdac_out: endpoint {
+		remote-endpoint = <&cvbs_connector_in>;
+	};
 };
