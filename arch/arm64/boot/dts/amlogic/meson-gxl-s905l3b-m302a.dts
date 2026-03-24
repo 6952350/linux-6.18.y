@@ -21,13 +21,14 @@
 /* GPU 修正 */
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+
 	interrupt-names = "gp", "gpmmu", "pp", "pmu",
 			  "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
@@ -59,19 +60,26 @@
 };
 
 /* ========================= */
-/* ✅ 启用模拟音频（关键） */
+/* ✅ 启用模拟音频 */
 /* ========================= */
 &acodec {
 	status = "okay";
 };
 
 /* ========================= */
-/* 🔥 核心：HDMI + AV 同时出声 */
+/* 🔥 HDMI + AV 同时出声核心 */
 /* ========================= */
 &sound {
 	status = "okay";
 
-	/* 强制 I2S 同时输出到 HDMI + ACODEC */
+	/* ⚠️ 属性必须在子节点前（已修复） */
+	audio-routing =
+		"Lineout", "AU2 OUTL",
+		"Lineout", "AU2 OUTR",
+		"AU2 INL", "ACODEC LOLP",
+		"AU2 INR", "ACODEC LORP";
+
+	/* I2S 同时输出到 HDMI + AV */
 	dai-link-2 {
 		sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
 		dai-format = "i2s";
@@ -85,11 +93,4 @@
 			sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
 		};
 	};
-
-	/* 补充 routing，防止无声 */
-	audio-routing =
-		"Lineout", "AU2 OUTL",
-		"Lineout", "AU2 OUTR",
-		"AU2 INL", "ACODEC LOLP",
-		"AU2 INR", "ACODEC LORP";
 };
