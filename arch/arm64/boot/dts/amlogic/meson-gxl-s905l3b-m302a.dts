@@ -48,9 +48,6 @@
 };
 /* Enable AV (CVBS) output */
 
-&cvbs_vdac {
-	status = "okay";
-};
 
 &cvbs_vdac_port {
 	status = "okay";
