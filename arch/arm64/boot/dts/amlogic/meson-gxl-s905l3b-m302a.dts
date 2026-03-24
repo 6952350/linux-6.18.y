@@ -1,67 +1,84 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2016 Endless Computers, Inc.
+ * Author: Carlo Caione <carlo@endlessm.com>
+ */
+
 /dts-v1/;
 
-#include "meson-gxl-s905w-p281.dts"
+/* 包含基础板级定义和 SoC 定义 */
+#include "meson-gxl-s905w-p281.dts" [cite: 2]
 
 / {
-	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
-	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
+    compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl"; [cite: 3]
+    model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box"; [cite: 3]
 
-	memory@0 {
-		device_type = "memory";
-		reg = <0x0 0x0 0x0 0x80000000>;
-	};
+    /* 内存配置：根据源码为 2GB (0x80000000) */
+    memory@0 {
+        device_type = "memory";
+        reg = <0x0 0x0 0x0 0x80000000>; [cite: 3]
+    };
+
+    /* CVBS (AV) 连接器定义 */
+    cvbs_connector: cvbs-connector {
+        compatible = "composite-video-connector"; [cite: 21]
+
+        port {
+            cvbs_connector_in: endpoint {
+                remote-endpoint = <&cvbs_vdac_out>; [cite: 21]
+            };
+        };
+    };
 };
 
-/* GPU */
-&mali {
-	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+/* * 视频输出部分 
+ */
 
-	interrupt-names = "gp", "gpmmu", "pp", "pmu",
-			  "pp0", "ppmmu0", "pp1", "ppmmu1";
-};
-
-/* eMMC */
-&sd_emmc_c {
-	status = "okay";
-	bus-width = <8>;
-	cap-mmc-highspeed;
-	mmc-ddr-1_8v;
-	mmc-hs200-1_8v;
-	max-frequency = <200000000>;
-};
-
-/* PHY */
-&internal_phy {
-	max-speed = <100>;
-};
-
-/* ========================= */
-/* ✅ 启用 AV 视频 */
-/* ========================= */
+/* 启用内部 VDAC 并连接到上面定义的连接器 */
 &cvbs_vdac_port {
-	status = "okay";
+    cvbs_vdac_out: endpoint {
+        remote-endpoint = <&cvbs_connector_in>; [cite: 32]
+    };
 };
 
-&cvbs_connector {
-	status = "okay";
+/* 确保网口使用内部 PHY 并限制速度为 100M */
+&internal_phy {
+    max-speed = <100>; [cite: 5, 132]
 };
 
-/* ========================= */
-/* ✅ 启用模拟音频（AV） */
-/* ========================= */
-&acodec {
-	status = "okay";
+&ethmac {
+    status = "okay"; [cite: 33]
 };
 
-/* （可选）确保 AIU 打开 */
-&aiu {
-	status = "okay";
+/* * GPU 修正：S905L 系列通常比标准 S905W 少一个 PP 核心 
+ */
+&mali {
+    interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>; [cite: 4]
+    interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1"; [cite: 4]
+};
+
+/* * 存储配置 
+ */
+&sd_emmc_c {
+    status = "okay"; [cite: 5]
+    bus-width = <8>; [cite: 5]
+    cap-mmc-highspeed; [cite: 5]
+    mmc-ddr-1_8v; [cite: 5]
+    mmc-hs200-1_8v; [cite: 5]
+    max-frequency = <200000000>; [cite: 5]
+};
+
+/* 启用 CEC 控制 (HDMI) */
+&cec_AO {
+    status = "okay"; [cite: 32]
+    pinctrl-0 = <&ao_cec_pins>; [cite: 32]
+    pinctrl-names = "default"; [cite: 32]
+    hdmi-phandle = <&hdmi_tx>; [cite: 32]
 };
