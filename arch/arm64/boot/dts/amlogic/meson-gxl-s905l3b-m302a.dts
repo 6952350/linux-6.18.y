@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /dts-v1/;
 
-/* 必须包含音频和时钟的头文件，否则无法识别 AIU 等常量 */
-#include <dt-bindings/sound/meson-aiu.h>
-#include <dt-bindings/clock/gxbb-clkc.h>
-#include <dt-bindings/interrupt-controller/irq.h>
-#include <dt-bindings/interrupt-controller/arm-gic.h>
-
-/* 包含基础板级定义 */
+/* 包含基础定义 */
 #include "meson-gxl-s905w-p281.dts"
+
+/* * 手动定义常量，防止 Lexical error 
+ * 这些值参考自内核 dt-bindings/sound/meson-aiu.h
+ */
+#define AIU_CPU 0
+#define AIU_HDMI_CTRL 1
+#define AIU_ACODEC_CTRL 2
+#define CPU_I2S_FIFO 1
+#define CPU_I2S_ENCODER 1
 
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
@@ -19,7 +22,7 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* CVBS 视频连接器 */
+	/* CVBS 视频接口连接器 */
 	cvbs-connector {
 		compatible = "composite-video-connector";
 		port {
@@ -29,7 +32,7 @@
 		};
 	};
 
-	/* 音频路由：将声音导向模拟 DAC (ACODEC) */
+	/* 音频卡配置：确保音频流向模拟 DAC */
 	sound {
 		compatible = "amlogic,gx-sound-card";
 		model = "M302A-AUDIO";
@@ -38,9 +41,10 @@
 			"AU2 INL", "ACODEC LOLN",
 			"AU2 INR", "ACODEC LORN";
 
-		assigned-clocks = <&clkc CLKID_MPLL0>,
-				  <&clkc CLKID_MPLL1>,
-				  <&clkc CLKID_MPLL2>;
+		/* 使用特定的 MPLL 时钟频率以支持音频采样率 */
+		assigned-clocks = <&clkc 1>,  /* CLKID_MPLL0 */
+				  <&clkc 2>,  /* CLKID_MPLL1 */
+				  <&clkc 3>;  /* CLKID_MPLL2 */
 		assigned-clock-parents = <0>, <0>, <0>;
 		assigned-clock-rates = <294912000>,
 				       <270950400>,
@@ -74,24 +78,23 @@
 	};
 };
 
-/* 视频输出连接 */
+/* 视频：VDAC 输出到 AV 孔 */
 &cvbs_vdac_port {
 	cvbs_vdac_out: endpoint {
 		remote-endpoint = <&cvbs_connector_in>;
 	};
 };
 
-/* 启用音频子系统 */
+/* 开启音频硬件模块 */
 &aiu {
 	status = "okay";
 };
 
-/* 启用内部模拟音频编解码器 */
 &acodec {
 	status = "okay";
 };
 
-/* 网络修正：限制为百兆 */
+/* 网络与存储修正 */
 &internal_phy {
 	max-speed = <100>;
 };
@@ -100,20 +103,12 @@
 	status = "okay";
 };
 
-/* GPU 核心修正 */
 &mali {
-	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+	interrupts = <0 160 4>, <0 161 4>, <0 162 4>, <0 163 4>,
+		     <0 164 4>, <0 165 4>, <0 166 4>, <0 167 4>;
 	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* eMMC 配置 */
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
