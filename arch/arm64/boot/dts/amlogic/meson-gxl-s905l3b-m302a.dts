@@ -11,82 +11,6 @@
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
-
-	/* 🔥 重写 sound */
-	sound {
-		compatible = "amlogic,gx-sound-card";
-		model = "M302A";
-
-		audio-aux-devs = <&dio2133>;
-
-		audio-routing =
-			"AU2 INL", "ACODEC LOLP",
-			"AU2 INR", "ACODEC LORP",
-			"Lineout", "AU2 OUTL",
-			"Lineout", "AU2 OUTR";
-
-		clocks = <&clkc CLKID_MPLL0>,
-			 <&clkc CLKID_MPLL1>,
-			 <&clkc CLKID_MPLL2>;
-
-		assigned-clocks = <&clkc CLKID_MPLL0>,
-				  <&clkc CLKID_MPLL1>,
-				  <&clkc CLKID_MPLL2>;
-
-		assigned-clock-rates = <294912000>,
-				       <270950400>,
-				       <393216000>;
-
-		/* FE */
-		dai-link-0 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-		};
-
-		dai-link-1 {
-			sound-dai = <&aiu AIU_CPU CPU_SPDIF_FIFO>;
-		};
-
-		/* HDMI */
-		dai-link-2 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
-			dai-format = "i2s";
-			mclk-fs = <256>;
-
-			codec-0 {
-				sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
-			};
-		};
-
-		dai-link-3 {
-			sound-dai = <&aiu AIU_CPU CPU_SPDIF_ENCODER>;
-
-			codec-0 {
-				sound-dai = <&spdif_dit>;
-			};
-		};
-
-		/* HDMI 输出 */
-		dai-link-4 {
-			sound-dai = <&aiu AIU_HDMI CTRL_OUT>;
-
-			codec-0 {
-				sound-dai = <&hdmi_tx>;
-			};
-		};
-
-		/* 🔥 AV（关键修复） */
-		dai-link-5 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-
-			codec-0 {
-				sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
-			};
-
-			codec-1 {
-				sound-dai = <&acodec>;
-			};
-		};
-	};
 };
 
 /* GPU */
@@ -119,7 +43,9 @@
 	max-speed = <100>;
 };
 
-/* AV 视频 */
+/* ========================= */
+/* ✅ 启用 AV 视频 */
+/* ========================= */
 &cvbs_vdac_port {
 	status = "okay";
 };
@@ -128,7 +54,14 @@
 	status = "okay";
 };
 
-/* 模拟音频 */
+/* ========================= */
+/* ✅ 启用模拟音频（AV） */
+/* ========================= */
 &acodec {
+	status = "okay";
+};
+
+/* （可选）确保 AIU 打开 */
+&aiu {
 	status = "okay";
 };
