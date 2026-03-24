@@ -1,9 +1,4 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-/*
- * Copyright (c) 2016 Endless Computers, Inc.
- * Author: Carlo Caione <carlo@endlessm.com>
- */
-
 /dts-v1/;
 
 #include "meson-gxl-s905w-p281.dts"
@@ -17,20 +12,16 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* 🔥 关键：重写 sound（不能用 &sound） */
+	/* 🔥 重写 sound */
 	sound {
 		compatible = "amlogic,gx-sound-card";
 		model = "M302A";
 
 		audio-aux-devs = <&dio2133>;
 
-		audio-widgets = "Line", "Lineout";
-
 		audio-routing =
 			"AU2 INL", "ACODEC LOLP",
 			"AU2 INR", "ACODEC LORP",
-			"AU2 INL", "ACODEC LOLN",
-			"AU2 INR", "ACODEC LORN",
 			"Lineout", "AU2 OUTL",
 			"Lineout", "AU2 OUTR";
 
@@ -46,7 +37,7 @@
 				       <270950400>,
 				       <393216000>;
 
-		/* ===== FE ===== */
+		/* FE */
 		dai-link-0 {
 			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
 		};
@@ -55,7 +46,7 @@
 			sound-dai = <&aiu AIU_CPU CPU_SPDIF_FIFO>;
 		};
 
-		/* 🔥 核心：I2S 同时输出 HDMI + AV */
+		/* HDMI */
 		dai-link-2 {
 			sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
 			dai-format = "i2s";
@@ -63,10 +54,6 @@
 
 			codec-0 {
 				sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
-			};
-
-			codec-1 {
-				sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
 			};
 		};
 
@@ -78,6 +65,7 @@
 			};
 		};
 
+		/* HDMI 输出 */
 		dai-link-4 {
 			sound-dai = <&aiu AIU_HDMI CTRL_OUT>;
 
@@ -86,10 +74,15 @@
 			};
 		};
 
+		/* 🔥 AV（关键修复） */
 		dai-link-5 {
-			sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
 
 			codec-0 {
+				sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+			};
+
+			codec-1 {
 				sound-dai = <&acodec>;
 			};
 		};
