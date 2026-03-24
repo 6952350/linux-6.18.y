@@ -2,7 +2,6 @@
 /*
  * Copyright (c) 2016 Endless Computers, Inc.
  * Author: Carlo Caione <carlo@endlessm.com>
- * Modified for MBH-M302A (S905L3b) - NO INVALID TAGS
  */
 
 /dts-v1/;
@@ -18,24 +17,11 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	// AV（CVBS）输出连接器 - 仅保留基础定义
-	cvbs-connector {
-		compatible = "composite-video-connector";
-		port {
-			cvbs_connector_in: endpoint {
-				remote-endpoint = <&cvbs_vdac_out>;
-			};
-		};
-	};
-
-	audio-amplifier {
-		compatible = "simple-audio-amplifier";
-		VCC-supply = <&vcc_3v3>;
-		enable-gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
-	};
 };
 
-// GPU配置 - 仅保留核心中断
+// the gpu in the S905L2 has one pp core less
+// (i.e. only two in total) than the one in the other S905X/W
+
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
@@ -48,7 +34,6 @@
 	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-// EMMC配置 - 核心功能
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
@@ -61,18 +46,29 @@
 &internal_phy {
 	max-speed = <100>;
 };
+/* ================= AV (CVBS + Audio) FIX ================= */
 
-// VPU视频处理 - 启用
-&vpu {
+/* 打开模拟视频输出（CVBS） */
+&vdac {
 	status = "okay";
 };
 
-// VDAC（AV输出核心）- 仅保留基础启用
-&vdac {
+/* 打开 CVBS 连接端口（p281 已定义，只需要启用） */
+&cvbs_vdac_port {
 	status = "okay";
-	port {
-		cvbs_vdac_out: endpoint {
-			remote-endpoint = <&cvbs_connector_in>;
-		};
-	};
+};
+
+/* 确保 CVBS connector 生效（继承，不要新建） */
+&cvbs_connector {
+	status = "okay";
+};
+
+/* 打开音频核心 */
+&aiu {
+	status = "okay";
+};
+
+/* 打开模拟音频 codec（AV 声音关键） */
+&acodec {
+	status = "okay";
 };
