@@ -19,7 +19,7 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* 定义 CVBS (AV) 接口连接器 */
+	/* 定义 AV 接口连接器 */
 	cvbs-connector {
 		compatible = "composite-video-connector";
 
@@ -31,16 +31,11 @@
 	};
 };
 
-/* 视频输出：连接 VDAC 到 CVBS 接口 */
+/* 视频输出：将 VDAC 端口连接到上面定义的连接器 */
 &cvbs_vdac_port {
 	cvbs_vdac_out: endpoint {
 		remote-endpoint = <&cvbs_connector_in>;
 	};
-};
-
-/* 确保 VDAC 开启 */
-&cvbs_vdac {
-	status = "okay";
 };
 
 /* 网络修正：使用内部 PHY 并限制百兆 */
@@ -52,7 +47,7 @@
 	status = "okay";
 };
 
-/* GPU 修正：针对 S905L3b 只有 2 个 PP 核心的情况 */
+/* GPU 修正：针对 S905L 系列核心数的调整 */
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
 		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
