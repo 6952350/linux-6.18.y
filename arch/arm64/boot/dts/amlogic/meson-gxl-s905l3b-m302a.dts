@@ -6,14 +6,14 @@
 
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
-	model = "M302A S905L3B";
+	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
 
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* ===== AV视频 ===== */
+	/* ===== AV视频输出 ===== */
 	cvbs_connector: cvbs-connector {
 		compatible = "composite-video-connector";
 		port {
@@ -23,12 +23,12 @@
 		};
 	};
 
-	/* ===== AV功放 ===== */
+	/* ===== 模拟音频功放（AV声音关键）===== */
 	av_amp: audio-amplifier {
 		compatible = "simple-audio-amplifier";
 		sound-name-prefix = "AV";
 		VCC-supply = <&vcc_3v3>;
-		enable-gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>; // 你原来那个
 	};
 
 	/* ===== 声卡 ===== */
@@ -57,10 +57,12 @@
 				       <270950400>,
 				       <393216000>;
 
+		/* I2S FIFO */
 		dai-link-0 {
 			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
 		};
 
+		/* I2S → ACODEC（关键） */
 		dai-link-1 {
 			sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
 			dai-format = "i2s";
@@ -71,6 +73,7 @@
 			};
 		};
 
+		/* ACODEC 输出 */
 		dai-link-2 {
 			sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
 
@@ -100,32 +103,10 @@
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
-	max-frequency = <200000000>;
+	cap-mmc-highspeed;
 	mmc-ddr-1_8v;
 	mmc-hs200-1_8v;
-};
-
-/* ===== WiFi修复（关键）===== */
-&sdio_pwrseq {
-	post-power-on-delay-ms = <200>;
-	power-off-delay-us = <10000>;
-	status = "okay";
-};
-
-&sd_emmc_a {
-	status = "okay";
-
-	max-frequency = <50000000>;
-
-	/delete-property/ sd-uhs-sdr104;
-
-	sd-uhs-sdr12;
-	sd-uhs-sdr25;
-	sd-uhs-sdr50;
-
-	keep-power-in-suspend;
-	non-removable;
-	disable-wp;
+	max-frequency = <200000000>;
 };
 
 /* ===== 网口 ===== */
@@ -139,21 +120,15 @@
 };
 
 /* ===== CVBS输出 ===== */
-&vdac {
-	status = "okay";
-};
-
 &cvbs_vdac_port {
 	cvbs_vdac_out: endpoint {
 		remote-endpoint = <&cvbs_connector_in>;
 	};
 };
 
-/* ===== 音频 ===== */
+/* ===== 音频核心必须启用 ===== */
 &aiu {
 	status = "okay";
-	pinctrl-0 = <&spdif_out_h_pins>;
-	pinctrl-names = "default";
 };
 
 &acodec {
