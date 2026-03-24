@@ -6,79 +6,79 @@
 
 /dts-v1/;
 
-/* 包含基础板级定义和 SoC 定义 */
-#include "meson-gxl-s905w-p281.dts" [cite: 2]
+/* 包含基础板级定义 */
+#include "meson-gxl-s905w-p281.dts"
 
 / {
-    compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl"; [cite: 3]
-    model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box"; [cite: 3]
+	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
+	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
 
-    /* 内存配置：根据源码为 2GB (0x80000000) */
-    memory@0 {
-        device_type = "memory";
-        reg = <0x0 0x0 0x0 0x80000000>; [cite: 3]
-    };
+	/* 修正内存为 2GB */
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>;
+	};
 
-    /* CVBS (AV) 连接器定义 */
-    cvbs_connector: cvbs-connector {
-        compatible = "composite-video-connector"; [cite: 21]
+	/* 定义 CVBS (AV) 接口连接器 */
+	cvbs-connector {
+		compatible = "composite-video-connector";
 
-        port {
-            cvbs_connector_in: endpoint {
-                remote-endpoint = <&cvbs_vdac_out>; [cite: 21]
-            };
-        };
-    };
+		port {
+			cvbs_connector_in: endpoint {
+				remote-endpoint = <&cvbs_vdac_out>;
+			};
+		};
+	};
 };
 
-/* * 视频输出部分 
- */
-
-/* 启用内部 VDAC 并连接到上面定义的连接器 */
+/* 视频输出：连接 VDAC 到 CVBS 接口 */
 &cvbs_vdac_port {
-    cvbs_vdac_out: endpoint {
-        remote-endpoint = <&cvbs_connector_in>; [cite: 32]
-    };
+	cvbs_vdac_out: endpoint {
+		remote-endpoint = <&cvbs_connector_in>;
+	};
 };
 
-/* 确保网口使用内部 PHY 并限制速度为 100M */
+/* 确保 VDAC 开启 */
+&cvbs_vdac {
+	status = "okay";
+};
+
+/* 网络修正：使用内部 PHY 并限制百兆 */
 &internal_phy {
-    max-speed = <100>; [cite: 5, 132]
+	max-speed = <100>;
 };
 
 &ethmac {
-    status = "okay"; [cite: 33]
+	status = "okay";
 };
 
-/* * GPU 修正：S905L 系列通常比标准 S905W 少一个 PP 核心 
- */
+/* GPU 修正：针对 S905L3b 只有 2 个 PP 核心的情况 */
 &mali {
-    interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>; [cite: 4]
-    interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1"; [cite: 4]
+	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* * 存储配置 
- */
+/* eMMC 存储配置 */
 &sd_emmc_c {
-    status = "okay"; [cite: 5]
-    bus-width = <8>; [cite: 5]
-    cap-mmc-highspeed; [cite: 5]
-    mmc-ddr-1_8v; [cite: 5]
-    mmc-hs200-1_8v; [cite: 5]
-    max-frequency = <200000000>; [cite: 5]
+	status = "okay";
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	max-frequency = <200000000>;
 };
 
-/* 启用 CEC 控制 (HDMI) */
+/* 启用 HDMI CEC */
 &cec_AO {
-    status = "okay"; [cite: 32]
-    pinctrl-0 = <&ao_cec_pins>; [cite: 32]
-    pinctrl-names = "default"; [cite: 32]
-    hdmi-phandle = <&hdmi_tx>; [cite: 32]
+	status = "okay";
+	pinctrl-0 = <&ao_cec_pins>;
+	pinctrl-names = "default";
+	hdmi-phandle = <&hdmi_tx>;
 };
