@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2016 Endless Computers, Inc.
+ * Author: Carlo Caione <carlo@endlessm.com>
+ */
 
 /dts-v1/;
 
@@ -7,99 +11,29 @@
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
 	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
-
+	
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* ===== AV视频输出 ===== */
-	cvbs_connector: cvbs-connector {
-		compatible = "composite-video-connector";
-		port {
-			cvbs_connector_in: endpoint {
-				remote-endpoint = <&cvbs_vdac_out>;
-			};
-		};
-	};
-
-	/* ===== 模拟音频功放（AV声音关键）===== */
-	av_amp: audio-amplifier {
-		compatible = "simple-audio-amplifier";
-		sound-name-prefix = "AV";
-		VCC-supply = <&vcc_3v3>;
-		enable-gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>; // 你原来那个
-	};
-
-	/* ===== 声卡 ===== */
-	sound {
-		compatible = "amlogic,gx-sound-card";
-		model = "M302A-AV";
-
-		audio-aux-devs = <&av_amp>;
-
-		audio-widgets = "Line", "Lineout";
-		audio-routing =
-			"AV INL", "ACODEC LOLP",
-			"AV INR", "ACODEC LORP",
-			"Lineout", "AV OUTL",
-			"Lineout", "AV OUTR";
-
-		clocks = <&clkc CLKID_MPLL0>,
-			 <&clkc CLKID_MPLL1>,
-			 <&clkc CLKID_MPLL2>;
-
-		assigned-clocks = <&clkc CLKID_MPLL0>,
-				  <&clkc CLKID_MPLL1>,
-				  <&clkc CLKID_MPLL2>;
-
-		assigned-clock-rates = <294912000>,
-				       <270950400>,
-				       <393216000>;
-
-		/* I2S FIFO */
-		dai-link-0 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-		};
-
-		/* I2S → ACODEC（关键） */
-		dai-link-1 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
-			dai-format = "i2s";
-			mclk-fs = <256>;
-
-			codec-0 {
-				sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
-			};
-		};
-
-		/* ACODEC 输出 */
-		dai-link-2 {
-			sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
-
-			codec-0 {
-				sound-dai = <&acodec>;
-			};
-		};
-	};
 };
 
-/* ===== GPU ===== */
+// the gpu in the S905L2 has one pp core less
+// (i.e. only two in total) than the one in the other S905X/W
+
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-
-	interrupt-names = "gp", "gpmmu", "pp", "pmu",
-			  "pp0", "ppmmu0", "pp1", "ppmmu1";
+		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* ===== eMMC ===== */
 &sd_emmc_c {
 	status = "okay";
 	bus-width = <8>;
@@ -109,29 +43,20 @@
 	max-frequency = <200000000>;
 };
 
-/* ===== 网口 ===== */
 &internal_phy {
 	max-speed = <100>;
 };
+/* Enable AV (CVBS) output */
 
-/* ===== 视频核心 ===== */
-&vpu {
+&cvbs_vdac {
 	status = "okay";
 };
 
-/* ===== CVBS输出 ===== */
 &cvbs_vdac_port {
-	cvbs_vdac_out: endpoint {
-		remote-endpoint = <&cvbs_connector_in>;
-	};
-};
-
-/* ===== 音频核心必须启用 ===== */
-&aiu {
 	status = "okay";
 };
 
-&acodec {
+/* 可选：确保connector启用（一般默认OK） */
+&cvbs_connector {
 	status = "okay";
-	AVDD-supply = <&vddio_ao18>;
 };
