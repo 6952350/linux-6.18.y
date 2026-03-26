@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /dts-v1/;
 
-/* 包含基础定义 */
+/* 包含基础板级定义 */
 #include "meson-gxl-s905w-p281.dts"
 
 /* 定义音频路径常量 */
@@ -34,9 +34,9 @@
 	};
 };
 
-/* 2. 修复音频：在现有声卡中添加模拟输出路由 */
-&sound {
-	/* 保留原有的 HDMI/SPDIF 路由，增加 AV (ACODEC) 路由 */
+/* 2. 核心修复：通过路径引用声卡节点，增加 AV 音频路由 */
+&{/sound} {
+	status = "okay";
 	audio-routing =
 		"AU2 INL", "ACODEC LOLN",
 		"AU2 INR", "ACODEC LORN",
@@ -44,7 +44,7 @@
 		"HDMI INR", "HDMI";
 };
 
-/* 3. 强制开启内部音频组件 */
+/* 3. 开启内部音频硬件 */
 &aiu {
 	status = "okay";
 };
@@ -53,14 +53,14 @@
 	status = "okay";
 };
 
-/* 4. GPU 修正 (保持不变) */
+/* 4. GPU 核心数修正 (S905L3b 只有 2 个 PP 核心) */
 &mali {
 	interrupts = <0 160 4>, <0 161 4>, <0 162 4>, <0 163 4>,
 		     <0 164 4>, <0 165 4>, <0 166 4>, <0 167 4>;
 	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* 5. 网络和存储 (保持不变) */
+/* 5. 网络与 eMMC 限制 */
 &internal_phy {
 	max-speed = <100>;
 };
