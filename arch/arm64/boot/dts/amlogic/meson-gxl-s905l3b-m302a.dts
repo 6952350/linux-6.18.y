@@ -4,14 +4,8 @@
 /* 包含基础定义 */
 #include "meson-gxl-s905w-p281.dts"
 
-/* * 手动定义常量，防止 Lexical error 
- * 这些值参考自内核 dt-bindings/sound/meson-aiu.h
- */
-#define AIU_CPU 0
-#define AIU_HDMI_CTRL 1
+/* 定义音频路径常量 */
 #define AIU_ACODEC_CTRL 2
-#define CPU_I2S_FIFO 1
-#define CPU_I2S_ENCODER 1
 
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
@@ -22,7 +16,7 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* CVBS 视频接口连接器 */
+	/* CVBS 视频连接器 */
 	cvbs-connector {
 		compatible = "composite-video-connector";
 		port {
@@ -31,61 +25,26 @@
 			};
 		};
 	};
-
-	/* 音频卡配置：确保音频流向模拟 DAC */
-	sound {
-		compatible = "amlogic,gx-sound-card";
-		model = "M302A-AUDIO";
-		
-		audio-routing =
-			"AU2 INL", "ACODEC LOLN",
-			"AU2 INR", "ACODEC LORN";
-
-		/* 使用特定的 MPLL 时钟频率以支持音频采样率 */
-		assigned-clocks = <&clkc 1>,  /* CLKID_MPLL0 */
-				  <&clkc 2>,  /* CLKID_MPLL1 */
-				  <&clkc 3>;  /* CLKID_MPLL2 */
-		assigned-clock-parents = <0>, <0>, <0>;
-		assigned-clock-rates = <294912000>,
-				       <270950400>,
-				       <393216000>;
-
-		dai-link-0 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-		};
-
-		dai-link-1 {
-			sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
-			dai-format = "i2s";
-			mclk-fs = <256>;
-
-			codec-0 {
-				sound-dai = <&aiu AIU_HDMI_CTRL 0>;
-			};
-
-			codec-1 {
-				sound-dai = <&aiu AIU_ACODEC_CTRL 0>;
-			};
-		};
-
-		dai-link-2 {
-			sound-dai = <&aiu AIU_HDMI_CTRL 1>;
-		};
-
-		dai-link-3 {
-			sound-dai = <&aiu AIU_ACODEC_CTRL 1>;
-		};
-	};
 };
 
-/* 视频：VDAC 输出到 AV 孔 */
+/* 1. 视频输出连接 */
 &cvbs_vdac_port {
 	cvbs_vdac_out: endpoint {
 		remote-endpoint = <&cvbs_connector_in>;
 	};
 };
 
-/* 开启音频硬件模块 */
+/* 2. 修复音频：在现有声卡中添加模拟输出路由 */
+&sound {
+	/* 保留原有的 HDMI/SPDIF 路由，增加 AV (ACODEC) 路由 */
+	audio-routing =
+		"AU2 INL", "ACODEC LOLN",
+		"AU2 INR", "ACODEC LORN",
+		"HDMI INL", "HDMI",
+		"HDMI INR", "HDMI";
+};
+
+/* 3. 强制开启内部音频组件 */
 &aiu {
 	status = "okay";
 };
@@ -94,19 +53,20 @@
 	status = "okay";
 };
 
-/* 网络与存储修正 */
+/* 4. GPU 修正 (保持不变) */
+&mali {
+	interrupts = <0 160 4>, <0 161 4>, <0 162 4>, <0 163 4>,
+		     <0 164 4>, <0 165 4>, <0 166 4>, <0 167 4>;
+	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
+};
+
+/* 5. 网络和存储 (保持不变) */
 &internal_phy {
 	max-speed = <100>;
 };
 
 &ethmac {
 	status = "okay";
-};
-
-&mali {
-	interrupts = <0 160 4>, <0 161 4>, <0 162 4>, <0 163 4>,
-		     <0 164 4>, <0 165 4>, <0 166 4>, <0 167 4>;
-	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
 &sd_emmc_c {
