@@ -1,25 +1,20 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /dts-v1/;
 
-/* 包含原始的 P281 定义，确保 HDMI 逻辑完整 */
+/* 包含原始 P281 定义，它已经处理好了 HDMI 和基础音频 */
 #include "meson-gxl-s905w-p281.dts"
-
-/* 定义常量，防止由于没包含头文件而报错 */
-#ifndef AIU_ACODEC_CTRL
-#define AIU_ACODEC_CTRL 2
-#endif
 
 / {
 	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
 	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
 
-	/* 修正内存为 2GB */
+	/* 修正内存 */
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* 添加 AV 视频连接器节点 */
+	/* CVBS 视频连接器 */
 	cvbs-connector {
 		compatible = "composite-video-connector";
 		port {
@@ -30,16 +25,16 @@
 	};
 };
 
-/* 1. 恢复视频：连接 VDAC 到 AV 接口，且不干扰 HDMI */
+/* 1. 视频输出连接：只连接引脚，不修改 VDAC 状态以免报错 */
 &cvbs_vdac_port {
 	cvbs_vdac_out: endpoint {
 		remote-endpoint = <&cvbs_connector_in>;
 	};
 };
 
-/* 2. 找回声卡：在现有的 sound 节点中追加路由，而不是重写整个节点 */
+/* 2. 音频修正：通过绝对路径向现有声卡追加 AV(ACODEC) 路由 */
+/* 这样不会破坏 HDMI，也不会让声卡消失 */
 &{/sound} {
-	/* 在保留原有 HDMI 路由的前提下，增加 ACODEC 路由 */
 	audio-routing =
 		"AU2 INL", "ACODEC LOLN",
 		"AU2 INR", "ACODEC LORN",
@@ -47,14 +42,14 @@
 		"HDMI INR", "HDMI";
 };
 
-/* 3. 注入音频：在现有的 dai-link-1 (I2S) 里面增加模拟输出分支 */
+/* 3. 在现有的 I2S 链路中注入模拟输出 */
 &{/sound/dai-link-1} {
 	codec-1 {
-		sound-dai = <&aiu AIU_ACODEC_CTRL 0>;
+		sound-dai = <&aiu 2 0>; /* 2 = AIU_ACODEC_CTRL, 0 = index */
 	};
 };
 
-/* 4. 强制启用必要的硬件模块 */
+/* 4. 确保硬件模块开启 */
 &aiu {
 	status = "okay";
 };
@@ -63,17 +58,14 @@
 	status = "okay";
 };
 
-&cvbs_vdac {
-	status = "okay";
-};
-
-/* 5. 保持其他的硬件修正 (GPU, 网络, eMMC) */
+/* 5. GPU 中断修正 (S905L3b 专用) */
 &mali {
 	interrupts = <0 160 4>, <0 161 4>, <0 162 4>, <0 163 4>,
 		     <0 164 4>, <0 165 4>, <0 166 4>, <0 167 4>;
 	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
+/* 6. 其他硬件限制 */
 &internal_phy {
 	max-speed = <100>;
 };
