@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /dts-v1/;
 
-/* 包含基础板级定义 */
 #include "meson-gxl-s905w-p281.dts"
 
-/* 定义音频路径常量 */
+/* 定义常量，防止编译报错 */
 #define AIU_ACODEC_CTRL 2
 
 / {
@@ -16,7 +15,7 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	/* CVBS 视频连接器 */
+	/* CVBS 视频物理接口 */
 	cvbs-connector {
 		compatible = "composite-video-connector";
 		port {
@@ -27,16 +26,19 @@
 	};
 };
 
-/* 1. 视频输出连接 */
+/* 1. 视频通路连接 */
 &cvbs_vdac_port {
 	cvbs_vdac_out: endpoint {
 		remote-endpoint = <&cvbs_connector_in>;
 	};
 };
 
-/* 2. 核心修复：通过路径引用声卡节点，增加 AV 音频路由 */
+/* 2. 声卡精准修复：注入 AV 音频路由和 Codec */
 &{/sound} {
+	/* 保持声卡开启 */
 	status = "okay";
+
+	/* 在原有 HDMI 路由基础上增加 ACODEC (模拟) 路由 */
 	audio-routing =
 		"AU2 INL", "ACODEC LOLN",
 		"AU2 INR", "ACODEC LORN",
@@ -44,7 +46,14 @@
 		"HDMI INR", "HDMI";
 };
 
-/* 3. 开启内部音频硬件 */
+/* 向现有的 I2S 链路 (dai-link-1) 添加模拟输出端 */
+&{/sound/dai-link-1} {
+	codec-1 {
+		sound-dai = <&aiu AIU_ACODEC_CTRL 0>;
+	};
+};
+
+/* 3. 强制开启硬件模块 */
 &aiu {
 	status = "okay";
 };
@@ -53,14 +62,14 @@
 	status = "okay";
 };
 
-/* 4. GPU 核心数修正 (S905L3b 只有 2 个 PP 核心) */
+/* 4. GPU 修正 (S905L3b 专用) */
 &mali {
 	interrupts = <0 160 4>, <0 161 4>, <0 162 4>, <0 163 4>,
 		     <0 164 4>, <0 165 4>, <0 166 4>, <0 167 4>;
 	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* 5. 网络与 eMMC 限制 */
+/* 5. 网络和存储修正 */
 &internal_phy {
 	max-speed = <100>;
 };
