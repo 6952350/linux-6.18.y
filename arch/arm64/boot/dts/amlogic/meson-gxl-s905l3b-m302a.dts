@@ -14,7 +14,7 @@
     };
 
     /* ===================== */
-    /* 🔊 完整音频系统（修复版） */
+    /* 🔊 音频（最终兼容版） */
     /* ===================== */
     sound {
         compatible = "amlogic,gx-sound-card";
@@ -24,50 +24,36 @@
             "Lineout", "ACODEC LOLP",
             "Lineout", "ACODEC LORP";
 
-        /* ===== AV（模拟输出）===== */
+        /* AV 输出 */
         dai-link-0 {
-            format = "i2s";
-            mclk-fs = <256>;
+            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+            dai-format = "i2s";
 
-            cpu {
-                sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+            codec-0 {
+                sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
             };
 
-            codec {
+            codec-1 {
                 sound-dai = <&acodec>;
-            };
-
-            platform {
-                sound-dai = <&aiu AIU_PLATFORM>;
             };
         };
 
-        /* ===== HDMI ===== */
+        /* HDMI 输出 */
         dai-link-1 {
-            format = "i2s";
-
-            cpu {
-                sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-            };
+            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
 
             codec {
                 sound-dai = <&hdmi_tx>;
             };
-
-            platform {
-                sound-dai = <&aiu AIU_PLATFORM>;
-            };
         };
     };
 
-    /* WiFi 电源 */
     wifi_pwrseq: wifi-pwrseq {
         compatible = "mmc-pwrseq-simple";
         reset-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_LOW>;
         post-power-on-delay-ms = <200>;
     };
 
-    /* 蓝牙 32K 时钟 */
     wifi32k: wifi32k {
         compatible = "fixed-clock";
         #clock-cells = <0>;
@@ -75,9 +61,7 @@
     };
 };
 
-/* ===================== */
-/* GPU 修正              */
-/* ===================== */
+/* GPU */
 &mali {
     interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
                  <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
@@ -92,9 +76,7 @@
                       "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* ===================== */
-/* eMMC                  */
-/* ===================== */
+/* eMMC */
 &sd_emmc_c {
     status = "okay";
     bus-width = <8>;
@@ -104,31 +86,23 @@
     max-frequency = <200000000>;
 };
 
-/* ===================== */
-/* WiFi                  */
-/* ===================== */
+/* WiFi */
 &sd_emmc_a {
     status = "okay";
-
     bus-width = <4>;
     cap-sd-highspeed;
     max-frequency = <50000000>;
     non-removable;
     disable-wp;
-
     mmc-pwrseq = <&wifi_pwrseq>;
 };
 
-/* ===================== */
-/* 网络                  */
-/* ===================== */
+/* 网络 */
 &internal_phy {
     max-speed = <100>;
 };
 
-/* ===================== */
-/* 启用音频硬件          */
-/* ===================== */
+/* 音频硬件 */
 &aiu {
     status = "okay";
 };
@@ -137,9 +111,7 @@
     status = "okay";
 };
 
-/* ===================== */
-/* CVBS 视频             */
-/* ===================== */
+/* CVBS */
 &cvbs_vdac_port {
     status = "okay";
 };
@@ -148,9 +120,7 @@
     status = "okay";
 };
 
-/* ===================== */
-/* 蓝牙                  */
-/* ===================== */
+/* 蓝牙 */
 &uart_A {
     status = "okay";
 
@@ -160,7 +130,6 @@
 
     bluetooth {
         compatible = "realtek,rtl8822cs-bt";
-
         enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
 
         interrupt-parent = <&gpio_intc>;
