@@ -13,53 +13,14 @@
         reg = <0x0 0x0 0x0 0x80000000>;
     };
 
-    /* ===================== */
-    /* 🔊 音频（AV + HDMI）  */
-    /* ===================== */
-    sound {
-        compatible = "amlogic,gx-sound-card";
-        model = "GXL-M302A-AUDIO";
-
-        audio-routing =
-            "Lineout", "ACODEC LOLP",
-            "Lineout", "ACODEC LORP";
-
-        /* AV */
-        dai-link-0 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-        };
-
-        dai-link-1 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
-            dai-format = "i2s";
-
-            codec {
-                sound-dai = <&acodec>;
-            };
-        };
-
-        /* HDMI */
-        dai-link-2 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-
-            codec {
-                sound-dai = <&hdmi_tx>;
-            };
-        };
-    };
-
-    /* ===================== */
-    /* 📡 WiFi 电源时序      */
-    /* ===================== */
+    /* WiFi 电源 */
     wifi_pwrseq: wifi-pwrseq {
         compatible = "mmc-pwrseq-simple";
         reset-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_LOW>;
         post-power-on-delay-ms = <200>;
     };
 
-    /* ===================== */
-    /* 🔵 32K 时钟（BT）     */
-    /* ===================== */
+    /* 32K 时钟 */
     wifi32k: wifi32k {
         compatible = "fixed-clock";
         #clock-cells = <0>;
@@ -67,9 +28,7 @@
     };
 };
 
-/* ===================== */
-/* 🔧 GPU 修正           */
-/* ===================== */
+/* GPU */
 &mali {
     interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
                  <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
@@ -83,9 +42,7 @@
                       "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* ===================== */
-/* 💾 eMMC               */
-/* ===================== */
+/* eMMC */
 &sd_emmc_c {
     status = "okay";
     bus-width = <8>;
@@ -95,31 +52,23 @@
     max-frequency = <200000000>;
 };
 
-/* ===================== */
-/* 📶 WiFi（8822CS）     */
-/* ===================== */
+/* WiFi */
 &sd_emmc_a {
     status = "okay";
-
     bus-width = <4>;
     cap-sd-highspeed;
     max-frequency = <50000000>;
     non-removable;
     disable-wp;
-
     mmc-pwrseq = <&wifi_pwrseq>;
 };
 
-/* ===================== */
-/* 🌐 网口限制           */
-/* ===================== */
+/* 网口 */
 &internal_phy {
     max-speed = <100>;
 };
 
-/* ===================== */
-/* 🔊 打开音频模块       */
-/* ===================== */
+/* 音频模块（只启用，不重写） */
 &aiu {
     status = "okay";
 };
@@ -128,9 +77,7 @@
     status = "okay";
 };
 
-/* ===================== */
-/* 🔵 蓝牙（8822CS）     */
-/* ===================== */
+/* 蓝牙 */
 &uart_A {
     status = "okay";
 
@@ -140,11 +87,10 @@
 
     bluetooth {
         compatible = "realtek,rtl8822cs-bt";
-
         enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
 
         interrupt-parent = <&gpio_intc>;
-        interrupts = <18 IRQ_TYPE_LEVEL_HIGH>;   /* ✅ 已修正 */
+        interrupts = <18 IRQ_TYPE_LEVEL_HIGH>;
         interrupt-names = "host-wakeup";
 
         max-speed = <1500000>;
