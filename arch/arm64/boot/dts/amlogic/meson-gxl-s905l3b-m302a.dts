@@ -86,7 +86,7 @@
 };
 
 /* ===================== */
-/* 📶 WiFi（8822CS SDIO）*/
+/* 📶 WiFi（8822CS）     */
 /* ===================== */
 &sd_emmc_a {
     status = "okay";
@@ -134,7 +134,7 @@
         enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
 
         interrupt-parent = <&gpio_intc>;
-        interrupts = <IRQID_GPIOX_18 IRQ_TYPE_LEVEL_HIGH>;
+        interrupts = <18 IRQ_TYPE_LEVEL_HIGH>;   // ✅ 已修正
         interrupt-names = "host-wakeup";
 
         max-speed = <1500000>;
