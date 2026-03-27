@@ -12,85 +12,38 @@
         device_type = "memory";
         reg = <0x0 0x0 0x0 0x80000000>;
     };
+};
 
-    /* ===================== */
-    /* 🔊 音频（最终稳定版） */
-    /* ===================== */
-    sound {
-        compatible = "amlogic,gx-sound-card";
-        model = "M302A-AUDIO";
-
-        audio-widgets = "Line", "Lineout";
-
-        audio-routing =
-            "Lineout", "ACODEC LOLP",
-            "Lineout", "ACODEC LORP";
-
-        /* ⭐ 关键：必须有 clock */
-        clocks = <&clkc CLKID_MPLL0>,
-                 <&clkc CLKID_MPLL1>,
-                 <&clkc CLKID_MPLL2>;
-
-        assigned-clocks = <&clkc CLKID_MPLL0>,
-                          <&clkc CLKID_MPLL1>,
-                          <&clkc CLKID_MPLL2>;
-
-        assigned-clock-rates = <294912000>,
-                               <270950400>,
-                               <393216000>;
-
-        /* PCM 输入 */
-        dai-link-0 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-        };
-
-        /* 编码器（分流 HDMI + AV） */
-        dai-link-1 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
-            dai-format = "i2s";
-            mclk-fs = <256>;
-
-            codec-0 {
-                sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
-            };
-
-            codec-1 {
-                sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
-            };
-        };
-
-        /* HDMI 输出 */
-        dai-link-2 {
-            sound-dai = <&aiu AIU_HDMI CTRL_OUT>;
-
-            codec-0 {
-                sound-dai = <&hdmi_tx>;
-            };
-        };
-
-        /* ⭐ AV 输出 */
-        dai-link-3 {
-            sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
-
-            codec-0 {
-                sound-dai = <&acodec>;
-            };
-        };
+/* ===================== */
+/* ✅ 只修正 AV 格式（关键） */
+/* ===================== */
+&sound {
+    /* ⚠️ 只改这里，不动结构 */
+    dai-link-2 {
+        dai-format = "left_j";
     };
+};
 
-    /* WiFi 电源 */
-    wifi_pwrseq: wifi-pwrseq {
-        compatible = "mmc-pwrseq-simple";
-        reset-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_LOW>;
-        post-power-on-delay-ms = <200>;
-    };
+/* ===================== */
+/* 必须启用的音频硬件     */
+/* ===================== */
+&aiu {
+    status = "okay";
+};
 
-    /* 蓝牙 32K 时钟 */
-    wifi32k: wifi32k {
-        compatible = "fixed-clock";
-        #clock-cells = <0>;
-        clock-frequency = <32768>;
-    };
+&acodec {
+    status = "okay";
+};
+
+/* ===================== */
+/* CVBS（AV输出）         */
+/* ===================== */
+&cvbs_vdac_port {
+    status = "okay";
+};
+
+&cvbs_connector {
+    status = "okay";
 };
 
 /* ===================== */
@@ -127,45 +80,23 @@
 /* ===================== */
 &sd_emmc_a {
     status = "okay";
+
     bus-width = <4>;
     cap-sd-highspeed;
     max-frequency = <50000000>;
     non-removable;
     disable-wp;
-    mmc-pwrseq = <&wifi_pwrseq>;
 };
 
 /* ===================== */
-/* 网络                 */
+/* 网络限制              */
 /* ===================== */
 &internal_phy {
     max-speed = <100>;
 };
 
 /* ===================== */
-/* 音频硬件              */
-/* ===================== */
-&aiu {
-    status = "okay";
-};
-
-&acodec {
-    status = "okay";
-};
-
-/* ===================== */
-/* CVBS                 */
-/* ===================== */
-&cvbs_vdac_port {
-    status = "okay";
-};
-
-&cvbs_connector {
-    status = "okay";
-};
-
-/* ===================== */
-/* 蓝牙                 */
+/* 蓝牙（可选）           */
 /* ===================== */
 &uart_A {
     status = "okay";
@@ -184,8 +115,5 @@
         interrupt-names = "host-wakeup";
 
         max-speed = <1500000>;
-
-        clocks = <&wifi32k>;
-        clock-names = "lpo";
     };
 };
