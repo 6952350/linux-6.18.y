@@ -1,109 +1,88 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
 /dts-v1/;
 
 #include "meson-gxl-s905w-p281.dts"
 
 / {
-	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
-	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
+    compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
+    model = "Amlogic Meson GXL (S905L3b) M302A Box";
 
-	/* 1. 强制覆盖掉父文件里那个坏事的 sound 节点，给它改名防止冲突 */
-	/delete-node/ sound;
+    memory@0 {
+        device_type = "memory";
+        reg = <0x0 0x0 0x0 0x80000000>;
+    };
 
-	/* 2. 创建一个全新的、专属于 M302A 的声卡节点 */
-	m302a_sound: sound {
-		compatible = "amlogic,gx-sound-card";
-		model = "M302A-AUDIO";
-		status = "okay";
+    /* ===================== */
+    /* 🔊 声卡（核心部分）   */
+    /* ===================== */
+    sound {
+        compatible = "amlogic,gx-sound-card";
+        model = "GXL-M302A-AUDIO";
 
-		/* 核心：只定义 HDMI 和模拟 AV 的路由 */
-		audio-routing =
-			"AU2 INL", "ACODEC LOLN",
-			"AU2 INR", "ACODEC LORN",
-			"HDMI INL", "HDMI",
-			"HDMI INR", "HDMI";
+        audio-routing =
+            "Lineout", "ACODEC LOLP",
+            "Lineout", "ACODEC LORP";
 
-		assigned-clocks = <&clkc 1>, <&clkc 2>, <&clkc 3>;
-		assigned-clock-parents = <0>, <0>, <0>;
-		assigned-clock-rates = <294912000>, <270950400>, <393216000>;
+        /* CPU -> FIFO */
+        dai-link-0 {
+            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+        };
 
-		/* I2S 传输链 */
-		dai-link-0 {
-			sound-dai = <&aiu 0 1>; /* AIU_CPU, I2S_FIFO */
-		};
+        /* FIFO -> I2S -> 模拟输出 */
+        dai-link-1 {
+            sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
+            dai-format = "i2s";
 
-		/* 核心链路：把声音分发给 HDMI 和 AV */
-		dai-link-1 {
-			sound-dai = <&aiu 0 1>; /* AIU_CPU, I2S_ENCODER */
-			dai-format = "i2s";
-			mclk-fs = <256>;
-
-			codec-0 {
-				sound-dai = <&aiu 1 0>; /* HDMI */
-			};
-
-			codec-1 {
-				sound-dai = <&aiu 2 0>; /* ACODEC (AV) */
-			};
-		};
-
-		/* 辅助控制器 */
-		dai-link-2 {
-			sound-dai = <&aiu 1 1>; /* HDMI_CTRL */
-		};
-
-		dai-link-3 {
-			sound-dai = <&aiu 2 1>; /* ACODEC_CTRL */
-		};
-	};
-
-	/* CVBS 视频连接 */
-	cvbs-connector {
-		compatible = "composite-video-connector";
-		port {
-			cvbs_connector_in: endpoint {
-				remote-endpoint = <&cvbs_vdac_out>;
-			};
-		};
-	};
+            codec {
+                sound-dai = <&acodec>;
+            };
+        };
+    };
 };
 
-/* 视频端口连接 */
-&cvbs_vdac_port {
-	cvbs_vdac_out: endpoint {
-		remote-endpoint = <&cvbs_connector_in>;
-	};
+/* ===================== */
+/* 🔧 GPU 修正           */
+/* ===================== */
+&mali {
+    interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+                 <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+    interrupt-names = "gp", "gpmmu", "pp", "pmu",
+                      "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* 3. 启用所有底层硬件模块 */
+/* ===================== */
+/* 💾 eMMC               */
+/* ===================== */
+&sd_emmc_c {
+    status = "okay";
+    bus-width = <8>;
+    cap-mmc-highspeed;
+    mmc-ddr-1_8v;
+    mmc-hs200-1_8v;
+    max-frequency = <200000000>;
+};
+
+/* ===================== */
+/* 🌐 网口限制           */
+/* ===================== */
+&internal_phy {
+    max-speed = <100>;
+};
+
+/* ===================== */
+/* 🔊 打开音频模块       */
+/* ===================== */
 &aiu {
-	status = "okay";
+    status = "okay";
 };
 
 &acodec {
-	status = "okay";
-};
-
-/* 4. GPU/网络/存储修正 (S905L3b 2核适配) */
-&mali {
-	interrupts = <0 160 4>, <0 161 4>, <0 162 4>, <0 163 4>,
-		     <0 164 4>, <0 165 4>, <0 166 4>, <0 167 4>;
-	interrupt-names = "gp", "gpmmu", "pp", "pmu", "pp0", "ppmmu0", "pp1", "ppmmu1";
-};
-
-&internal_phy {
-	max-speed = <100>;
-};
-
-&ethmac {
-	status = "okay";
-};
-
-&sd_emmc_c {
-	status = "okay";
-	bus-width = <8>;
-	cap-mmc-highspeed;
-	mmc-ddr-1_8v;
-	mmc-hs200-1_8v;
-	max-frequency = <200000000>;
+    status = "okay";
 };
