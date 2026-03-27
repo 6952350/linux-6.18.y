@@ -13,6 +13,41 @@
         reg = <0x0 0x0 0x0 0x80000000>;
     };
 
+    /* ===================== */
+    /* 🔊 核心：完整音频系统 */
+    /* ===================== */
+    sound {
+        compatible = "amlogic,gx-sound-card";
+        model = "M302A-AUDIO";
+
+        audio-routing =
+            "Lineout", "ACODEC LOLP",
+            "Lineout", "ACODEC LORP";
+
+        /* ===== AV 输出 ===== */
+        dai-link-0 {
+            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+            dai-format = "i2s";
+
+            codec-0 {
+                sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+            };
+
+            codec-1 {
+                sound-dai = <&acodec>;
+            };
+        };
+
+        /* ===== HDMI 输出 ===== */
+        dai-link-1 {
+            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+
+            codec {
+                sound-dai = <&hdmi_tx>;
+            };
+        };
+    };
+
     /* WiFi 电源 */
     wifi_pwrseq: wifi-pwrseq {
         compatible = "mmc-pwrseq-simple";
@@ -58,7 +93,7 @@
 };
 
 /* ===================== */
-/* WiFi（SDIO）          */
+/* WiFi                  */
 /* ===================== */
 &sd_emmc_a {
     status = "okay";
@@ -91,25 +126,7 @@
 };
 
 /* ===================== */
-/* ⭐ 扩展 sound（关键修复点） */
-/* ===================== */
-&sound {
-    dai-link-av {
-        sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-        dai-format = "i2s";   /* ✅ 已修正：属性在子节点前 */
-
-        codec-0 {
-            sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
-        };
-
-        codec-1 {
-            sound-dai = <&acodec>;
-        };
-    };
-};
-
-/* ===================== */
-/* CVBS 视频              */
+/* CVBS 视频             */
 /* ===================== */
 &cvbs_vdac_port {
     status = "okay";
