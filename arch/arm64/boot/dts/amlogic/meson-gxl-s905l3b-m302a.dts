@@ -14,36 +14,50 @@
     };
 
     /* ===================== */
-    /* 🔊 音频（最终修复版） */
+    /* 🔊 正确音频结构（关键） */
     /* ===================== */
     sound {
         compatible = "amlogic,gx-sound-card";
         model = "M302A-AUDIO";
 
         audio-routing =
-            "Lineout", "ACODEC OUTL",
-            "Lineout", "ACODEC OUTR";
+            "Lineout", "ACODEC LOLP",
+            "Lineout", "ACODEC LORP";
 
-        /* ===== AV 输出（关键链路）===== */
+        /* PCM 输入 */
         dai-link-0 {
             sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+        };
+
+        /* 编码（分流 HDMI + AV） */
+        dai-link-1 {
+            sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
             dai-format = "i2s";
 
             codec-0 {
-                sound-dai = <&toacodec>;
+                sound-dai = <&aiu AIU_HDMI CTRL_I2S>;
             };
 
             codec-1 {
-                sound-dai = <&acodec>;
+                sound-dai = <&aiu AIU_ACODEC CTRL_I2S>;
             };
         };
 
-        /* ===== HDMI ===== */
-        dai-link-1 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+        /* HDMI 输出 */
+        dai-link-2 {
+            sound-dai = <&aiu AIU_HDMI CTRL_OUT>;
 
-            codec {
+            codec-0 {
                 sound-dai = <&hdmi_tx>;
+            };
+        };
+
+        /* ⭐ AV 输出（关键） */
+        dai-link-3 {
+            sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+
+            codec-0 {
+                sound-dai = <&acodec>;
             };
         };
     };
@@ -64,7 +78,7 @@
 };
 
 /* ===================== */
-/* GPU                  */
+/* GPU 修正              */
 /* ===================== */
 &mali {
     interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
@@ -93,27 +107,29 @@
 };
 
 /* ===================== */
-/* WiFi                 */
+/* WiFi（SDIO）          */
 /* ===================== */
 &sd_emmc_a {
     status = "okay";
+
     bus-width = <4>;
     cap-sd-highspeed;
     max-frequency = <50000000>;
     non-removable;
     disable-wp;
+
     mmc-pwrseq = <&wifi_pwrseq>;
 };
 
 /* ===================== */
-/* 网络                 */
+/* 网口限制              */
 /* ===================== */
 &internal_phy {
     max-speed = <100>;
 };
 
 /* ===================== */
-/* 音频硬件（关键）      */
+/* 音频硬件（必须启用）   */
 /* ===================== */
 &aiu {
     status = "okay";
@@ -123,13 +139,8 @@
     status = "okay";
 };
 
-/* ⭐ 必须：toacodec */
-&toacodec {
-    status = "okay";
-};
-
 /* ===================== */
-/* CVBS                */
+/* CVBS 输出             */
 /* ===================== */
 &cvbs_vdac_port {
     status = "okay";
@@ -140,7 +151,7 @@
 };
 
 /* ===================== */
-/* 蓝牙                */
+/* 蓝牙                 */
 /* ===================== */
 &uart_A {
     status = "okay";
