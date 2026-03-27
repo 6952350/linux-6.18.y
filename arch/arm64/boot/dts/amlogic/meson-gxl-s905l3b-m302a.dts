@@ -14,7 +14,7 @@
     };
 
     /* ===================== */
-    /* 🔊 声卡（核心部分）   */
+    /* 🔊 音频（AV 输出）    */
     /* ===================== */
     sound {
         compatible = "amlogic,gx-sound-card";
@@ -24,12 +24,10 @@
             "Lineout", "ACODEC LOLP",
             "Lineout", "ACODEC LORP";
 
-        /* CPU -> FIFO */
         dai-link-0 {
             sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
         };
 
-        /* FIFO -> I2S -> 模拟输出 */
         dai-link-1 {
             sound-dai = <&aiu AIU_CPU CPU_I2S_ENCODER>;
             dai-format = "i2s";
@@ -38,6 +36,24 @@
                 sound-dai = <&acodec>;
             };
         };
+    };
+
+    /* ===================== */
+    /* 📡 WiFi 电源时序      */
+    /* ===================== */
+    wifi_pwrseq: wifi-pwrseq {
+        compatible = "mmc-pwrseq-simple";
+        reset-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_LOW>;
+        post-power-on-delay-ms = <200>;
+    };
+
+    /* ===================== */
+    /* 🔵 32K 时钟（BT）     */
+    /* ===================== */
+    wifi32k: wifi32k {
+        compatible = "fixed-clock";
+        #clock-cells = <0>;
+        clock-frequency = <32768>;
     };
 };
 
@@ -70,6 +86,21 @@
 };
 
 /* ===================== */
+/* 📶 WiFi（8822CS SDIO）*/
+/* ===================== */
+&sd_emmc_a {
+    status = "okay";
+
+    bus-width = <4>;
+    cap-sd-highspeed;
+    max-frequency = <50000000>;
+    non-removable;
+    disable-wp;
+
+    mmc-pwrseq = <&wifi_pwrseq>;
+};
+
+/* ===================== */
 /* 🌐 网口限制           */
 /* ===================== */
 &internal_phy {
@@ -85,4 +116,30 @@
 
 &acodec {
     status = "okay";
+};
+
+/* ===================== */
+/* 🔵 蓝牙（8822CS）     */
+/* ===================== */
+&uart_A {
+    status = "okay";
+
+    pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
+    pinctrl-names = "default";
+    uart-has-rtscts;
+
+    bluetooth {
+        compatible = "realtek,rtl8822cs-bt";
+
+        enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
+
+        interrupt-parent = <&gpio_intc>;
+        interrupts = <IRQID_GPIOX_18 IRQ_TYPE_LEVEL_HIGH>;
+        interrupt-names = "host-wakeup";
+
+        max-speed = <1500000>;
+
+        clocks = <&wifi32k>;
+        clock-names = "lpo";
+    };
 };
