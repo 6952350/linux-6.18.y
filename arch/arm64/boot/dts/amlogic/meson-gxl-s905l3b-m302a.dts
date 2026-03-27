@@ -14,7 +14,7 @@
     };
 
     /* ===================== */
-    /* 🔊 核心：完整音频系统 */
+    /* 🔊 完整音频系统（修复版） */
     /* ===================== */
     sound {
         compatible = "amlogic,gx-sound-card";
@@ -24,26 +24,38 @@
             "Lineout", "ACODEC LOLP",
             "Lineout", "ACODEC LORP";
 
-        /* ===== AV 输出 ===== */
+        /* ===== AV（模拟输出）===== */
         dai-link-0 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
-            dai-format = "i2s";
+            format = "i2s";
+            mclk-fs = <256>;
 
-            codec-0 {
-                sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+            cpu {
+                sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
             };
 
-            codec-1 {
+            codec {
                 sound-dai = <&acodec>;
+            };
+
+            platform {
+                sound-dai = <&aiu AIU_PLATFORM>;
             };
         };
 
-        /* ===== HDMI 输出 ===== */
+        /* ===== HDMI ===== */
         dai-link-1 {
-            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+            format = "i2s";
+
+            cpu {
+                sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+            };
 
             codec {
                 sound-dai = <&hdmi_tx>;
+            };
+
+            platform {
+                sound-dai = <&aiu AIU_PLATFORM>;
             };
         };
     };
@@ -108,7 +120,7 @@
 };
 
 /* ===================== */
-/* 网口限制              */
+/* 网络                  */
 /* ===================== */
 &internal_phy {
     max-speed = <100>;
