@@ -91,12 +91,12 @@
 };
 
 /* ===================== */
-/* ⭐ 核心：扩展 sound（不要重写） */
+/* ⭐ 扩展 sound（关键修复点） */
 /* ===================== */
 &sound {
-    /* 新增 AV 输出链路 */
     dai-link-av {
         sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+        dai-format = "i2s";   /* ✅ 已修正：属性在子节点前 */
 
         codec-0 {
             sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
@@ -105,13 +105,11 @@
         codec-1 {
             sound-dai = <&acodec>;
         };
-
-        dai-format = "i2s";
     };
 };
 
 /* ===================== */
-/* CVBS（视频，可选）     */
+/* CVBS 视频              */
 /* ===================== */
 &cvbs_vdac_port {
     status = "okay";
