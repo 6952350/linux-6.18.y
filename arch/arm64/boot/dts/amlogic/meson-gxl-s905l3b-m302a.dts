@@ -14,7 +14,7 @@
     };
 
     /* ===================== */
-    /* 🔊 音频（AV 输出）    */
+    /* 🔊 音频（AV + HDMI）  */
     /* ===================== */
     sound {
         compatible = "amlogic,gx-sound-card";
@@ -24,6 +24,7 @@
             "Lineout", "ACODEC LOLP",
             "Lineout", "ACODEC LORP";
 
+        /* AV */
         dai-link-0 {
             sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
         };
@@ -34,6 +35,15 @@
 
             codec {
                 sound-dai = <&acodec>;
+            };
+        };
+
+        /* HDMI */
+        dai-link-2 {
+            sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
+
+            codec {
+                sound-dai = <&hdmi_tx>;
             };
         };
     };
@@ -134,7 +144,7 @@
         enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
 
         interrupt-parent = <&gpio_intc>;
-        interrupts = <18 IRQ_TYPE_LEVEL_HIGH>;   // ✅ 已修正
+        interrupts = <18 IRQ_TYPE_LEVEL_HIGH>;   /* ✅ 已修正 */
         interrupt-names = "host-wakeup";
 
         max-speed = <1500000>;
