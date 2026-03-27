@@ -1,119 +1,72 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2016 Endless Computers, Inc.
+ * Author: Carlo Caione <carlo@endlessm.com>
+ */
 
 /dts-v1/;
 
 #include "meson-gxl-s905w-p281.dts"
 
 / {
-    compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
-    model = "Amlogic Meson GXL (S905L3b) M302A Box";
+	compatible = "amlogic,m302a", "amlogic,s905w", "amlogic,meson-gxl";
+	model = "Amlogic Meson GXL (S905L3b) MBH-M302A Box";
 
-    memory@0 {
-        device_type = "memory";
-        reg = <0x0 0x0 0x0 0x80000000>;
-    };
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>;
+	};
+
+	sound {
+		model = "MBH-M302A";
+		audio-widgets = "Line", "Lineout";
+		audio-routing = "AU2 INL", "ACODEC LOLP",
+				"AU2 INR", "ACODEC LORP",
+				"AU2 INL", "ACODEC LOLN",
+				"AU2 INR", "ACODEC LORN",
+				"Lineout", "AU2 OUTL",
+				"Lineout", "AU2 OUTR";
+		status = "okay";
+	};
+
 };
 
-/* ===================== */
-/* ✅ 只修正 AV 格式（关键） */
-/* ===================== */
-&sound {
-    /* ⚠️ 只改这里，不动结构 */
-    dai-link-2 {
-        dai-format = "left_j";
-    };
+// the gpu in the S905L2 has one pp core less
+// (i.e. only two in total) than the one in the other S905X/W
+
+&mali {
+	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* ===================== */
-/* 必须启用的音频硬件     */
-/* ===================== */
+&sd_emmc_c {
+	status = "okay";
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	max-frequency = <200000000>;
+};
+
+&internal_phy {
+	max-speed = <100>;
+};
+
 &aiu {
-    status = "okay";
+	status = "okay";
 };
 
 &acodec {
-    status = "okay";
-};
-
-/* ===================== */
-/* CVBS（AV输出）         */
-/* ===================== */
-&cvbs_vdac_port {
-    status = "okay";
+	status = "okay";
 };
 
 &cvbs_connector {
-    status = "okay";
-};
-
-/* ===================== */
-/* GPU 修正              */
-/* ===================== */
-&mali {
-    interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-                 <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-
-    interrupt-names = "gp", "gpmmu", "pp", "pmu",
-                      "pp0", "ppmmu0", "pp1", "ppmmu1";
-};
-
-/* ===================== */
-/* eMMC                 */
-/* ===================== */
-&sd_emmc_c {
-    status = "okay";
-    bus-width = <8>;
-    cap-mmc-highspeed;
-    mmc-ddr-1_8v;
-    mmc-hs200-1_8v;
-    max-frequency = <200000000>;
-};
-
-/* ===================== */
-/* WiFi（SDIO）          */
-/* ===================== */
-&sd_emmc_a {
-    status = "okay";
-
-    bus-width = <4>;
-    cap-sd-highspeed;
-    max-frequency = <50000000>;
-    non-removable;
-    disable-wp;
-};
-
-/* ===================== */
-/* 网络限制              */
-/* ===================== */
-&internal_phy {
-    max-speed = <100>;
-};
-
-/* ===================== */
-/* 蓝牙（可选）           */
-/* ===================== */
-&uart_A {
-    status = "okay";
-
-    pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
-    pinctrl-names = "default";
-    uart-has-rtscts;
-
-    bluetooth {
-        compatible = "realtek,rtl8822cs-bt";
-
-        enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
-
-        interrupt-parent = <&gpio_intc>;
-        interrupts = <18 IRQ_TYPE_LEVEL_HIGH>;
-        interrupt-names = "host-wakeup";
-
-        max-speed = <1500000>;
-    };
+	status = "okay";
 };
