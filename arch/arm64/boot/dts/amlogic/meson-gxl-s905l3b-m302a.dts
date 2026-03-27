@@ -14,23 +14,23 @@
     };
 
     /* ===================== */
-    /* 🔊 音频（最终兼容版） */
+    /* 🔊 音频（最终修复版） */
     /* ===================== */
     sound {
         compatible = "amlogic,gx-sound-card";
         model = "M302A-AUDIO";
 
         audio-routing =
-            "Lineout", "ACODEC LOLP",
-            "Lineout", "ACODEC LORP";
+            "Lineout", "ACODEC OUTL",
+            "Lineout", "ACODEC OUTR";
 
-        /* AV 输出 */
+        /* ===== AV 输出（关键链路）===== */
         dai-link-0 {
             sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
             dai-format = "i2s";
 
             codec-0 {
-                sound-dai = <&aiu AIU_ACODEC CTRL_OUT>;
+                sound-dai = <&toacodec>;
             };
 
             codec-1 {
@@ -38,7 +38,7 @@
             };
         };
 
-        /* HDMI 输出 */
+        /* ===== HDMI ===== */
         dai-link-1 {
             sound-dai = <&aiu AIU_CPU CPU_I2S_FIFO>;
 
@@ -48,12 +48,14 @@
         };
     };
 
+    /* WiFi 电源 */
     wifi_pwrseq: wifi-pwrseq {
         compatible = "mmc-pwrseq-simple";
         reset-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_LOW>;
         post-power-on-delay-ms = <200>;
     };
 
+    /* 蓝牙 32K 时钟 */
     wifi32k: wifi32k {
         compatible = "fixed-clock";
         #clock-cells = <0>;
@@ -61,7 +63,9 @@
     };
 };
 
-/* GPU */
+/* ===================== */
+/* GPU                  */
+/* ===================== */
 &mali {
     interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
                  <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
@@ -76,7 +80,9 @@
                       "pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
-/* eMMC */
+/* ===================== */
+/* eMMC                 */
+/* ===================== */
 &sd_emmc_c {
     status = "okay";
     bus-width = <8>;
@@ -86,7 +92,9 @@
     max-frequency = <200000000>;
 };
 
-/* WiFi */
+/* ===================== */
+/* WiFi                 */
+/* ===================== */
 &sd_emmc_a {
     status = "okay";
     bus-width = <4>;
@@ -97,12 +105,16 @@
     mmc-pwrseq = <&wifi_pwrseq>;
 };
 
-/* 网络 */
+/* ===================== */
+/* 网络                 */
+/* ===================== */
 &internal_phy {
     max-speed = <100>;
 };
 
-/* 音频硬件 */
+/* ===================== */
+/* 音频硬件（关键）      */
+/* ===================== */
 &aiu {
     status = "okay";
 };
@@ -111,7 +123,14 @@
     status = "okay";
 };
 
-/* CVBS */
+/* ⭐ 必须：toacodec */
+&toacodec {
+    status = "okay";
+};
+
+/* ===================== */
+/* CVBS                */
+/* ===================== */
 &cvbs_vdac_port {
     status = "okay";
 };
@@ -120,7 +139,9 @@
     status = "okay";
 };
 
-/* 蓝牙 */
+/* ===================== */
+/* 蓝牙                */
+/* ===================== */
 &uart_A {
     status = "okay";
 
@@ -130,6 +151,7 @@
 
     bluetooth {
         compatible = "realtek,rtl8822cs-bt";
+
         enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
 
         interrupt-parent = <&gpio_intc>;
