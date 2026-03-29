@@ -28,22 +28,22 @@
 				"Lineout", "AU2 OUTR";
 		status = "okay";
 	};
+
 };
 
-/* the gpu in the S905L2 has one pp core less
- * (i.e. only two in total) than the one in the other S905X/W
- */
+// the gpu in the S905L2 has one pp core less
+// (i.e. only two in total) than the one in the other S905X/W
+
 &mali {
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-	interrupt-names = "gp", "gpmmu", "pp", "pmu",
-			  "pp0", "ppmmu0", "pp1", "ppmmu1";
+		<GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>,
+		<GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "gp", "gpmmu", "pp", "pmu","pp0", "ppmmu0", "pp1", "ppmmu1";
 };
 
 &sd_emmc_c {
@@ -69,39 +69,4 @@
 
 &cvbs_connector {
 	status = "okay";
-};
-
-&sdio_pwrseq {
-	post-power-on-delay-ms = <200>;
-	power-off-delay-us = <10000>;
-};
-
-&sd_emmc_a {
-	/delete-property/ sd-uhs-sdr104;
-	max-frequency = <50000000>;
-	sd-uhs-sdr12;
-	sd-uhs-sdr25;
-	sd-uhs-sdr50;
-
-	rtl8822cs: wifi@1 {
-		reg = <1>;
-	};
-};
-
-&uart_A {
-	status = "okay";
-	pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
-	pinctrl-names = "default";
-	uart-has-rtscts;
-
-	bluetooth {
-		compatible = "realtek,rtl8822cs-bt";
-		enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
-		host-wake-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
-		clocks = <&wifi32k>;
-		clock-names = "lpo";
-		vbat-supply = <&vddao_3v3>;
-		vddio-supply = <&vddio_boot>;
-		status = "okay";
-	};
 };
